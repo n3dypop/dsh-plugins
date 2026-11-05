@@ -1,0 +1,28 @@
+# Illustrative profile entries, not an executable machine configuration.
+# Replace module URLs with pathToFileURL(absoluteFilename).href.
+# Replace ABSOLUTE_PRIVATE_RUNTIME_ROOT with the actual managed runtime.
+- insert:
+    - id: studio-host
+      name: file:///ABSOLUTE_PLUGIN_CHECKOUT/apps/dsh-plugins/studio-host/index.mjs
+      disabled: true
+      config:
+        runtimeRoot: ABSOLUTE_PRIVATE_RUNTIME_ROOT
+        nodeExecutable: ABSOLUTE_DSH_NODE_EXECUTABLE
+        port: 3080
+        launcher:
+          executable: pwsh.exe
+          args:
+            - -NoLogo
+            - -NoProfile
+            - -NonInteractive
+            - -File
+            - ABSOLUTE_MANAGED_DSH_START_SCRIPT
+            - -Service
+            - DSH
+          cwd: ABSOLUTE_PRIVATE_RUNTIME_ROOT
+        # An integration may also supply policyModule and requirePolicy: true.
+    - id: studio-sessions
+      name: file:///ABSOLUTE_PLUGIN_CHECKOUT/apps/dsh-plugins/studio-sessions/index.mjs
+      disabled: true
+      config:
+        runtimeRoot: ABSOLUTE_PRIVATE_RUNTIME_ROOT

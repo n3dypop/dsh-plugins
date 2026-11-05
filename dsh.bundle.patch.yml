@@ -1,0 +1,12 @@
+# Configure disabled Host entries in your private profile before enabling them.
+- insert:
+    - id: studio-appearance
+      name: ./apps/dsh-plugins/studio-appearance/index.mjs
+    - id: studio-image-viewer
+      name: ./apps/dsh-plugins/studio-image-viewer/index.mjs
+    - id: studio-sessions
+      name: ./apps/dsh-plugins/studio-sessions/index.mjs
+      disabled: true
+    - id: studio-host
+      name: ./apps/dsh-plugins/studio-host/index.mjs
+      disabled: true

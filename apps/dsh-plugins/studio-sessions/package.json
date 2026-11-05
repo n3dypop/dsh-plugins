@@ -1,0 +1,29 @@
+{
+  "name": "studio-sessions",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Session cleanup and workspace appearance",
+  "main": "index.mjs",
+  "exports": {
+    ".": "./index.mjs",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-settings-general",
+        "@deepseek-ai/dsh-api-session-controller",
+        "@deepseek-ai/dsh-api-workspace-controller",
+        "@deepseek-ai/dsh-client-locale"
+      ]
+    }
+  },
+  "engines": {
+    "node": ">=24",
+    "dsh": "0.2.1-rc.5 || 0.2.2-rc.1"
+  },
+  "license": "MIT"
+}
