@@ -35,8 +35,8 @@ export async function createRuntimeAdapter({root,ctx,settings,launcher,workerPat
       const rpcId=randomUUID(),native=await requestJson(url+'/api/session/list',{method:'POST',headers:{Cookie:context.cookie,'Content-Type':'application/json'},body:JSON.stringify({type:'client-request',rpcId,method:'session/list',payload:{args:{_request:{}}}})}),items=native.result?.value?.items;
       if(native.rpcId!==rpcId||native.result?.ok!==true||!Array.isArray(items)||items.some(item=>typeof item.running!=='boolean'))throw fault('DSHの会話状態を確認できません。');
       const owned=new Set(ctx.agents.list().map(sessionId));if(items.some(item=>item.running&&!owned.has(item.sessionId)))throw fault('所有者を確認できない実行中のDSH会話があります。');
-      await policy?.verifyExternal(context,{mode,quiescent});observedImpact=await observeAgents();if(quiescent&&observedImpact.affected.queuedMessages)throw fault('確認後に入力が追加されました。');
-    }else await policy?.verifyExternal(context,{mode,quiescent});
+      await policy?.verifyExternal(context,{mode,quiescent,launcher});observedImpact=await observeAgents();if(quiescent&&observedImpact.affected.queuedMessages)throw fault('確認後に入力が追加されました。');
+    }else await policy?.verifyExternal(context,{mode,quiescent,launcher});
 
     const last=localState(ctx);if(mode!=='force'&&(last.running||last.queued))throw fault('会話の状態が変わりました。再起動を保留します。');
     return {local:last,epoch:{pid:epoch.pid,startTimeUtcTicks:epoch.startTimeUtcTicks,executable:epoch.executable,url:epoch.url},...(observedImpact?{affected:observedImpact.affected,revision:observedImpact.revision}:{})};

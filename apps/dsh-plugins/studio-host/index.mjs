@@ -4,10 +4,13 @@ import {createRestartManager} from './restart-manager.mjs';
 import {UUID,restartMode} from './restart-state.mjs';
 import {hostConfiguration} from './config.mjs';
 import {configuredFile} from '../shared/runtime-files.mjs';
+import {createMaintenanceManager} from './maintenance-manager.mjs';
+import {maintenanceStopHandler} from './maintenance-stop-route.mjs';
 export {Config} from './config.mjs';
 export const name='studio-host';
 export const inject=['connection','agents','sessions','sessionQuery','sessionPersistence','appExit'];
 export const PATH='/api/local-studio/host';
+export const MAINTENANCE_PATH='/api/local-studio/maintenance-stop';
 // This lifecycle manager identifies and restarts the managed standalone Node
 // Web Host. Electron's Desktop process ownership is different; never register
 // its mutation route there, even if a compatible DSH engine version matches.
@@ -33,4 +36,8 @@ export async function apply(ctx,input){
   const adapter=await createRuntimeAdapter({root,ctx,settings:{nodeExecutable:config.nodeExecutable,port:config.port},launcher:config.launcher,workerPath:config.workerPath,policy}),manager=await createRestartManager({root,adapter});
   ctx.effect(()=>()=>manager.dispose());
   ctx.effect(()=>ctx.connection.fetch.register({path:PATH,methods:['GET','POST'],requestBody:'buffered',fetch:hostHandler({manager,origin:`http://127.0.0.1:${config.port}`})}));
+  // The deployed Media Studio policy currently has no maintenance capability.
+  // Registration is impossible unless trusted installation code explicitly
+  // supplies it and its existing ledger can be opened without provisioning.
+  if(policy?.maintenance){let maintenance;try{maintenance=await createMaintenanceManager({ctx,root,port:config.port,adapter,policy:policy.maintenance});}catch{maintenance=null;}if(maintenance){ctx.effect(()=>()=>maintenance.dispose());ctx.effect(()=>ctx.connection.fetch.register({path:MAINTENANCE_PATH,methods:['GET','POST'],requestBody:'buffered',fetch:maintenanceStopHandler({manager:maintenance,origin:`http://127.0.0.1:${config.port}`})}));}}
 }
