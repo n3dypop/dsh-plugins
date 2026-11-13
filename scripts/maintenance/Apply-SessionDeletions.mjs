@@ -12,26 +12,34 @@ export async function assertDshStopped(root,settings){
   await new Promise((done,fail)=>{const socket=createConnection({host:'127.0.0.1',port:settings.dshPort});socket.setTimeout(5000);socket.once('connect',()=>{socket.destroy();fail(Error('DSH is listening; offline session deletion was refused'));});socket.once('timeout',()=>{socket.destroy();fail(Error('Cannot establish that DSH is stopped'));});socket.once('error',error=>error.code==='ECONNREFUSED'?done():fail(error));});
 }
 // The hashes pin the five backend entry points reviewed against the official
-// 0.2.2-rc.1 npm installation. This is not a signature or an attestation of all
-// transitive dependencies. Unknown versions, builds and paths fail closed.
-const REVIEWED_022={
+// release payloads. Unknown versions, builds and paths fail closed.
+const REVIEWED_RC1=Object.freeze({
   'dsh-session-persistence-jsonl':'69efef5f84dddf947032bc1425067878fa610416c8885acde2ded9b01230c9b7',
   'dsh-session':'6fad466aa1f7aa64bfa038681ead5721f66c88e9891e25d357d2b8edbccd5494',
   'dsh-session-format':'6c7417ec2cd555e2781197d91c4566c88ffcf2728f362d7a2937859be57226ec',
   'dsh-session-format-catalog':'836bbb772ab505c299f1a4a246164c50c7c08b67ab0d17f1251d7ea2cd8c1818',
   'dsh-workspace':'931ca0cb10c5102066c7723690a887f0e6e8e7ab0ffdee1a782686745b0b934f',
-};
+});
+const REVIEWED_BACKENDS=new Map([
+  ['0.2.2-rc.1',REVIEWED_RC1],
+  ['0.2.2-rc.3',{
+    ...REVIEWED_RC1,
+    'dsh-session':'d9911b5e1585bcb142d03ce46eb2990b3fc7c254de5a76d3ffb124bd2469216c',
+    'dsh-workspace':'8964c54f3c3f2fd79ed92e5fb1413d84ba80272c4eb984677aaf70bf4d687848',
+  }],
+]);
 export async function assertReviewedRuntime(dshDirectory){
   if(typeof dshDirectory!=='string'||!isAbsolute(dshDirectory))throw Error('DSH runtime directory must be absolute');
   const require=createRequire(join(dshDirectory,'package.json'));
   const dshManifest=require.resolve('@deepseek-ai/dsh/package.json');
   const pkg=JSON.parse(await readFile(dshManifest,'utf8'));
   if(pkg.version==='0.2.1-rc.5')return pkg.version;
-  if(pkg.version!=='0.2.2-rc.1')throw Error('Session deletion adapter must be reviewed for this DSH version');
+  const reviewed=REVIEWED_BACKENDS.get(pkg.version);
+  if(!reviewed)throw Error('Session deletion adapter must be reviewed for this DSH version');
   const runtime=await realpath(dshDirectory);
   async function inside(path){const actual=await realpath(path),part=relative(runtime,actual);if(!part||part==='..'||part.startsWith('..'+sep)||isAbsolute(part))throw Error('Reviewed backend resolved outside the selected runtime');}
   await inside(dshManifest);
-  for(const [name,expected] of Object.entries(REVIEWED_022)){
+  for(const [name,expected] of Object.entries(reviewed)){
     const manifestPath=require.resolve(`@deepseek-ai/${name}/package.json`),entryPath=require.resolve(`@deepseek-ai/${name}`);
     await inside(manifestPath);await inside(entryPath);
     const manifest=JSON.parse(await readFile(manifestPath,'utf8'));

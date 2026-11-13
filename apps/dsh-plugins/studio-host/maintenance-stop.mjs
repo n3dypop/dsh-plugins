@@ -23,8 +23,9 @@ function sessionSnapshot(value){
 function validEpoch(e){return e&&Number.isSafeInteger(e.pid)&&e.pid>0&&typeof e.startTimeUtcTicks==='string'&&/^\d+$/.test(e.startTimeUtcTicks)&&typeof e.executable==='string'&&e.executable.length>0&&typeof e.url==='string'&&/^http:\/\/127\.0\.0\.1:\d+$/.test(e.url);}
 function equalEpoch(a,b){return validEpoch(a)&&validEpoch(b)&&a.pid===b.pid&&a.startTimeUtcTicks===b.startTimeUtcTicks&&a.executable===b.executable&&a.url===b.url;}
 
-export function createMaintenanceStop({adapter,owner,ledger,readSessions}){
+export function createMaintenanceStop({adapter,owner,ledger,readSessions,requireSynchronousOwner=false}){
   if(!adapter||['verify','freeze','flush','exit'].some(k=>typeof adapter[k]!=='function')||!owner||typeof owner.verify!=='function'||!ledger||['admit','savePrepared','readPrepared'].some(k=>typeof ledger[k]!=='function')||typeof readSessions!=='function')throw TypeError('Maintenance stop dependencies are incomplete');
+  if(typeof requireSynchronousOwner!=='boolean'||requireSynchronousOwner&&typeof owner.verifySync!=='function')throw TypeError('Synchronous owner verification is unavailable');
   let active=false;
   return Object.freeze({async prepare(requestId,context){
     if(!UUID.test(requestId??'')||!context||typeof context.cookie!=='string'||!context.cookie)throw Error('Invalid maintenance request');
@@ -50,7 +51,15 @@ export function createMaintenanceStop({adapter,owner,ledger,readSessions}){
           await adapter.flush();current=await adapter.verify(context,{mode:'normal'});sessions=sessionSnapshot(await readSessions(context));
           if(!equalEpoch(record.epoch,current?.epoch)||hash(sessions)!==hash(saved)||freeze.changed())throw Error('Host or inputs changed after stop intent');
           if(hash(await owner.verify())!==hash(ownership)||freeze.changed())throw Error('Maintenance owner or inputs changed before stop');
-          // No asynchronous work between the last checks and requesting exit.
+          // verify includes the configured external-resource policy. Run it
+          // after the last owner await, then synchronously check the freeze and
+          // request exit. Non-cooperating external processes can still start
+          // work after this observation; recheck before stopping Controller.
+          current=await adapter.verify(context,{mode:'normal'});
+          if(!equalEpoch(record.epoch,current?.epoch)||freeze.changed())throw Error('Host or inputs changed after stop intent');
+          // Bootstrap can require an independently implemented synchronous
+          // owner check; an absent, asynchronous, or uncertain result refuses.
+          if(requireSynchronousOwner&&(owner.verifySync(ownership)!==true||freeze.changed()))throw Error('Maintenance owner or inputs changed before stop');
           // A request is not proof that the process subsequently exited cleanly.
           exitAttempted=true;adapter.exit();return {requestId,state:'exit-requested'};
         }finally{if(!exitAttempted){freeze.release();active=false;}}

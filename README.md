@@ -24,8 +24,8 @@ workflow or private runtime is bundled.
 
 Appearance owns accent and wallpaper preferences; Session Library owns
 per-workspace icons and colors. The viewer owns its image controls and locale.
-DSH 0.2.2 supplies Japanese natively; each independent plugin owns its extra
-translations. Host restart delegates external-work protection
+DSH supplies the language setting; each plugin owns its extra translations.
+Host restart delegates external-work protection
 to an explicitly configured policy. [Component boundaries](docs/components.md)
 describe these responsibilities and update behavior.
 
@@ -34,13 +34,12 @@ Keep them when updating instead of registering renamed duplicates.
 
 ## Install
 
-The supported targets are DSH Web **0.2.1-rc.5** or **0.2.2-rc.1**, and
-Windows Desktop **0.2.2-rc.1**, with Node.js **24**. Windows-specific session persistence and restart adapters
+The supported targets are DSH Web **0.2.1-rc.5**, **0.2.2-rc.1**, and
+**0.2.2-rc.3**, and Windows Desktop **0.2.2-rc.1** and **0.2.2-rc.3**,
+with Node.js **24**. Windows-specific session persistence and restart adapters
 require Windows and PowerShell 7. Other platforms need their own verified
 adapters before those operations are enabled. Session Library and host restart
-are Web-only in this version; see the [compatibility matrix](docs/compatibility.md).
-Japanese is provided by DSH 0.2.2, not this bundle. The retired Japanese shim
-is not distributed here.
+are Web-only; see the [compatibility matrix](docs/compatibility.md).
 
 From your DSH checkout, clone this repository into its local extension area:
 
@@ -69,9 +68,10 @@ stopped; do not overwrite local changes or share profile package-manager files.
 
 ## Use
 
-The plugins add their controls to native Settings. DSH 0.2.2 Japanese is selected
-through **General → Language**. Appearance changes use the same theme tokens as DSH and
-compatible plugins. Image attachments open the viewer when clicked.
+The plugins add their controls to native Settings. Select Japanese in DSH under
+**General → Language**. Set the accent and wallpaper under **Appearance**, or
+adjust the full window opacity on Windows Desktop. Click an image attachment to
+open the viewer.
 
 **Session Library** supports filtering, selection and workspace appearance.
 Permanent deletion is previewed and reserved, then applied before the next

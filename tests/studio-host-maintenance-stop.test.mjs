@@ -35,3 +35,31 @@ test('lost owner after admission preserves the receipt and releases the freeze',
  await assert.rejects(op.requestExit(),/owner/);assert.equal(f.saved.state,'prepared');assert.equal(f.released,1);assert.equal(f.exits,0);
 });
 test('partial or changed owner evidence cannot authorize stop',async()=>{for(const value of [true,{}, {nonceHash:'a'.repeat(64),fenceInfoHash:'b'.repeat(64),holderPid:1}]){const f=fixture();f.setOwner(value);await assert.rejects(f.make().prepare(id,{cookie:'x'}),/owner/);assert.equal(f.exits,0);}const f=fixture(),op=await f.make().prepare(id,{cookie:'x'});f.setOwner({nonceHash:'a'.repeat(64),fenceInfoHash:'c'.repeat(64),holderPid:14,holderTicks:'123'});await assert.rejects(op.requestExit(),/owner/);assert.equal(f.exits,0);});
+test('checks resources after final owner and checks freeze synchronously before exit',async()=>{
+ for(const changedDuringFinalVerify of [false,true]){
+  const f=fixture(),trace=[],verify=f.deps.adapter.verify,owner=f.deps.owner.verify,exit=f.deps.adapter.exit;let count=0;
+  f.deps.adapter.verify=async(...args)=>{trace.push('verify');const value=await verify(...args);if(++count===5&&changedDuringFinalVerify)f.setChanged(true);return value;};
+  f.deps.owner.verify=async(...args)=>{trace.push('owner');return owner(...args);};f.deps.adapter.exit=()=>{trace.push('exit');exit();};
+  const op=await f.make().prepare(id,{cookie:'x'});
+  if(changedDuringFinalVerify){await assert.rejects(op.requestExit(),/inputs changed/);assert.equal(f.exits,0);assert.equal(f.released,1);assert.deepEqual(trace.slice(-2),['owner','verify']);}
+  else{await op.requestExit();assert.equal(f.exits,1);assert.deepEqual(trace.slice(-3),['owner','verify','exit']);}
+ }
+});
+test('documents owner loss during the last asynchronous resource check',async()=>{
+ // A resource check and a cross-process owner probe are separate awaits. The
+ // current API has no synchronous or atomic holder-liveness signal after the
+ // last resource observation; this fixture records that limit explicitly.
+ const f=fixture(),verify=f.deps.adapter.verify;let count=0;
+ f.deps.adapter.verify=async(...args)=>{const result=await verify(...args);if(++count===5)f.setOwner(false);return result;};
+ const op=await f.make().prepare(id,{cookie:'x'});await op.requestExit();assert.equal(f.exits,1);
+});
+test('optional strict synchronous owner check refuses missing, stale or unconfirmed ownership',async()=>{
+ const missing=fixture();assert.throws(()=>createMaintenanceStop({...missing.deps,requireSynchronousOwner:true}),/Synchronous owner/);
+ for(const result of [false,Promise.resolve(true),true]){
+  const f=fixture(),verify=f.deps.adapter.verify;let count=0,live=true;
+  f.deps.adapter.verify=async(...args)=>{const value=await verify(...args);if(++count===5&&result===false)live=false;return value;};
+  f.deps.owner.verifySync=()=>live?result:false;
+  const op=await createMaintenanceStop({...f.deps,requireSynchronousOwner:true}).prepare(id,{cookie:'x'});
+  if(result===true){await op.requestExit();assert.equal(f.exits,1);}else{await assert.rejects(op.requestExit(),/owner/);assert.equal(f.exits,0);assert.equal(f.released,1);}
+ }
+});

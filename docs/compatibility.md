@@ -1,16 +1,16 @@
 # Compatibility and maintenance
 
-The qualified targets are the DSH Web Host **0.2.1-rc.5** or **0.2.2-rc.1**
-and Windows Desktop Host **0.2.2-rc.1**. DSH APIs are pre-stable; these exact versions do not imply
-compatibility with other releases. The distinction between isolated tests and a
-user's live installation is maintained in the deployment's validation record.
+The supported targets are DSH Web **0.2.1-rc.5**, **0.2.2-rc.1**, and
+**0.2.2-rc.3**, and Windows Desktop **0.2.2-rc.1** and **0.2.2-rc.3**.
+Check the deployment's validation record for the operations exercised with its
+build and profile.
 
 | Capability | Web | Windows Desktop |
 | --- | --- | --- |
 | Accent and wallpaper | Supported | Supported |
 | Native window opacity | Unavailable: a web page cannot change the browser window's native opacity | Available when explicitly enabled and the owned Desktop window can be identified; affects text and the whole window |
 | Image viewer | Supported | Supported |
-| Japanese language | DSH 0.2.2 provides it natively; the retired shim is not included | DSH 0.2.2 provides it natively |
+| Japanese language | Built into DSH 0.2.2 | Built into DSH 0.2.2 |
 | Session Library and permanent deletion | Supported by the managed Web adapter | Not supported; keep `studio-sessions` disabled |
 | Host restart | Supported by the managed Web adapter | Not supported; keep `studio-host` disabled |
 
@@ -52,6 +52,9 @@ of Git.
   independently. Never test force termination against a user's live session.
 - Optional policies are integration boundaries. A missing or invalid required
   policy must not silently weaken an existing production deployment.
+- The guarded host-maintenance catalog is pinned to the reviewed Web build.
+  Its separate stop-only handshake stays unavailable on a new backend until
+  the active backend and the persisted inbox contract are verified.
 
 Keep automated tests synthetic and temporary. Live acceptance must use an
 isolated DSH home with no copied production data. Ordinary success in a fixture
