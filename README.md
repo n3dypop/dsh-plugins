@@ -6,7 +6,7 @@ patched copy of the DSH application.
 
 | Plugin | Purpose |
 | --- | --- |
-| `studio-appearance` | Accent colors and wallpaper; Windows Desktop can also adjust native window opacity. |
+| `studio-appearance` | Accent colors, wallpaper and a Settings-only sidebar footer. Windows Desktop can also adjust window opacity. |
 | `studio-image-viewer` | Zoom, fit, original size, pan and backdrop/keyboard dismissal for attachments. |
 | `studio-sessions` | Session filtering and deletion reservations, plus workspace icons and colors. |
 | `studio-host` | Normal and explicitly confirmed force restart of the DSH host. |
@@ -69,9 +69,10 @@ stopped; do not overwrite local changes or share profile package-manager files.
 ## Use
 
 The plugins add their controls to native Settings. Select Japanese in DSH under
-**General → Language**. Set the accent and wallpaper under **Appearance**, or
-adjust the full window opacity on Windows Desktop. Click an image attachment to
-open the viewer.
+**General → Language**. Under **General → Accent & wallpaper**, adjust the
+accent and wallpaper or enable **Show only Settings in the sidebar footer**.
+Turning it off restores the account menu. Windows Desktop also supports window
+opacity in the same section. Click an image attachment to open the viewer.
 
 **Session Library** supports filtering, selection and workspace appearance.
 Permanent deletion is previewed and reserved, then applied before the next
