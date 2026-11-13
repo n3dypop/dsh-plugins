@@ -27,7 +27,7 @@ function appearance(){
   let entry;
   const react={createElement(type,props,...children){return{type,props:props??{},children};},useState(initial){return[typeof initial==='function'?initial():initial,()=>{}];},useRef(value){return{current:value};},useEffect(){}};
   runInNewContext(source,{window:{__ModuleLoader__:{load(value){entry=value;}}}});
-  return entry.factory(id=>id==='react'?react:{Button:'button'});
+  return entry.factory(id=>id==='react'?react:{Button:'button',IconSettingsOutlineMedium:'settings-icon'});
 }
 function memoryDb(){
   let image;
@@ -59,6 +59,35 @@ test('accent and wallpaper work without native font APIs and preserve native fon
 });
 
 function nodes(tree){return tree&&typeof tree==='object'?[tree,...(tree.children??[]).flatMap(nodes)]:[];}
+test('settings-only mode persists and the replacement opens the native settings dialog',()=>{
+  const api=appearance();
+  const values=new Map(),attributes=new Map();
+  const controller=api.createController({
+    theme:{},storage:{getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)},
+    indexedDB:memoryDb(),doc:{body:{style:{setProperty(){},removeProperty(){}},
+      setAttribute:(key,value)=>attributes.set(key,value),removeAttribute:key=>attributes.delete(key)}},
+    urlApi:{},
+  });
+  const t=key=>api.ja[key];
+  const toggle=nodes(api.Appearance({controller,t,settingsLauncherAvailable:true}))
+    .find(node=>node.type==='label'&&nodes(node).some(child=>child.children.includes(api.ja.settingsOnly)));
+  const control=nodes(toggle).find(node=>node.type==='input');
+  assert.equal(control.props.checked,false);
+  control.props.onChange({target:{checked:true}});
+  assert.equal(controller.snapshot().settingsOnly,true);
+  controller.reloadPreferences();
+  assert.equal(controller.snapshot().settingsOnly,true);
+  let opened=0;
+  const button=api.SettingsLauncher({wide:false,settingsOpen:false,t,openSettings:()=>opened++});
+  assert.equal(button.props['aria-label'],'設定');
+  assert.equal(button.props['aria-haspopup'],'dialog');
+  button.props.onClick();
+  assert.equal(opened,1);
+  controller.setPreferences({settingsOnly:false});
+  assert.equal(controller.snapshot().settingsOnly,false);
+  controller.dispose();
+});
+
 test('appearance renders accent, wallpaper and Desktop window controls with localized browser limitations',()=>{
   const api=appearance(),state={accentEnabled:false,accent:'#4176e6',opacity:18,wallpaperFit:'cover',wallpaperPosition:'center',wallpaperScope:'conversation',hasWallpaper:false,wallpaperUrl:null,error:''};
   for(const [locale,titles,title]of [['en',['Accent','Wallpaper','Window opacity'],'Accent & wallpaper'],['ja',['アクセント','背景画像','ウィンドウの不透明度'],'アクセントと背景']]){
