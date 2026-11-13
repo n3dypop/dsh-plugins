@@ -1,7 +1,6 @@
 # Studio Appearance
 
-Appearance settings for DSH Web **0.2.1-rc.5** or **0.2.2-rc.1**, and Windows Desktop
-**0.2.2-rc.1**. Open **Settings → General** to
+Appearance settings for DSH Web and Windows Desktop. Open **Settings → General** to
 choose accent colors and wallpaper. Controls use DSH buttons and theme tokens,
 so compatible plugins follow the same accent.
 
@@ -12,6 +11,9 @@ so compatible plugins follow the same accent.
 - Set opacity from 0–50%, cover/contain/tile, and center/top/bottom alignment.
   **Conversation area** keeps native pane backgrounds; **Entire window** extends
   the wallpaper through docked side panes and the header.
+- Turn on **Show only Settings in the sidebar footer** to open Settings directly.
+  Turn it off to restore the account menu. This option uses the shared settings
+  launcher slot and is saved separately in each browser or Desktop profile.
 
 The composer, menus, dialogs, floating panes and displayed images retain readable
 surfaces. Wallpaper changes affect the interface, not generated image content.

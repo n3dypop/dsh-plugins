@@ -3,10 +3,10 @@ window.__ModuleLoader__.load({
   id:'studio-appearance',
   factory(require){
     const React=require('react');
-    const {Button}=require('@deepseek-ai/dsh-client-ui-primitives');
+    const {Button,IconSettingsOutlineMedium}=require('@deepseek-ai/dsh-client-ui-primitives');
     const KEY='studio-appearance.preferences.v1', WINDOW_KEY='studio-appearance.window-opacity.v1', DB='studio-appearance', STORE='assets', WALLPAPER='wallpaper';
     const MAX_BYTES=20*1024*1024, MAX_PIXELS=40000000;
-    const defaults=Object.freeze({accentEnabled:false,accent:'#4176e6',opacity:18,wallpaperFit:'cover',wallpaperPosition:'center',wallpaperScope:'conversation'});
+    const defaults=Object.freeze({accentEnabled:false,accent:'#4176e6',opacity:18,wallpaperFit:'cover',wallpaperPosition:'center',wallpaperScope:'conversation',settingsOnly:false});
     const presets=Object.freeze([{name:'ブルー',color:'#4176e6'},{name:'バイオレット',color:'#8057d8'},{name:'ジェイド',color:'#218071'},{name:'コーラル',color:'#c65d41'},{name:'ゴールド',color:'#a77b22'},{name:'スレート',color:'#64748b'}]);
     const copy={
       title:['アクセントと背景','Accent & wallpaper'],preview:['プレビュー','Preview'],accentTitle:['アクセント','Accent'],
@@ -17,6 +17,7 @@ window.__ModuleLoader__.load({
       opacity:['濃さ','Opacity'],fit:['表示方法','Fit'],position:['位置','Position'],cover:['全体に広げる','Cover'],contain:['画像全体','Contain'],tile:['タイル','Tile'],center:['中央','Center'],top:['上','Top'],bottom:['下','Bottom'],
       windowOpacity:['ウィンドウの不透明度','Window opacity'],windowDesktopOnly:['ウィンドウの透過はDesktopアプリ版のみ利用できます。','Window transparency is available only in the Desktop app.'],windowIncludesText:['文字を含むウィンドウ全体に適用します。','Applies to the whole window, including text.'],windowUnavailable:['ウィンドウの不透明度を確認できません。','Window opacity could not be confirmed.'],windowSaveFailed:['不透明度を適用しましたが、設定を保存できません。','Opacity was applied, but the preference could not be saved.'],windowRetry:['もう一度確認','Try again'],windowApply:['適用','Apply'],windowUnset:['未設定','Not set'],windowApplied:['最後に適用','Last applied'],
       windowReapply:['直前の結果は不明です。値を選び、適用して確認してください。','The last result is unknown. Select a value and apply it to confirm.'],
+      settingsOnly:['左下に設定だけを表示','Show only Settings in the sidebar footer'],settings:['設定','Settings'],
       blue:['ブルー','Blue'],violet:['バイオレット','Violet'],jade:['ジェイド','Jade'],coral:['コーラル','Coral'],gold:['ゴールド','Gold'],slate:['スレート','Slate'],
       imageStorage:['このブラウザーまたはアプリでは画像を保存できません。','This browser or app cannot store images.'],imageReadWrite:['背景画像を読み書きできません。','The wallpaper could not be read or written.'],imageSave:['背景画像を保存できません。','The wallpaper could not be saved.'],
       storageOpen:['背景画像の保存先を開けません。','Wallpaper storage could not be opened.'],storageBusy:['背景画像の保存先が別の画面で使用中です。','Wallpaper storage is in use by another page.'],
@@ -32,7 +33,8 @@ window.__ModuleLoader__.load({
         opacity:Number.isInteger(v.opacity)&&v.opacity>=0&&v.opacity<=50?v.opacity:defaults.opacity,
         wallpaperFit:['cover','contain','tile'].includes(v.wallpaperFit)?v.wallpaperFit:defaults.wallpaperFit,
         wallpaperPosition:['center','top','bottom'].includes(v.wallpaperPosition)?v.wallpaperPosition:defaults.wallpaperPosition,
-        wallpaperScope:['conversation','window'].includes(v.wallpaperScope)?v.wallpaperScope:defaults.wallpaperScope};
+        wallpaperScope:['conversation','window'].includes(v.wallpaperScope)?v.wallpaperScope:defaults.wallpaperScope,
+        settingsOnly:v.settingsOnly===true};
     }
     function readPreferences(storage){try{return normalize(JSON.parse(storage.getItem(KEY)||'null'));}catch{return {...defaults};}}
     function rgb(hex){return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));}
@@ -176,7 +178,14 @@ window.__ModuleLoader__.load({
       void initialize();
       return {snapshot,subscribe(fn){listeners.add(fn);return()=>listeners.delete(fn);},setOpacity:apply,retry:initialize,dispose(){alive=false;listeners.clear();}};
     }
-    function Appearance({controller,t,windowOpacity}){
+    function SettingsLauncher({openSettings,settingsOpen,settingsShortcut,wide,t}){
+      return React.createElement(Button,{
+        type:'button',variant:'ghost',size:'sm',className:'studio-settings-launcher',onClick:()=>openSettings(),
+        title:t('settings'),'aria-label':t('settings'),'aria-haspopup':'dialog','aria-expanded':settingsOpen,
+        'aria-keyshortcuts':settingsShortcut?.aria,
+      },React.createElement(IconSettingsOutlineMedium,{size:16,'aria-hidden':true}),wide?t('settings'):null);
+    }
+    function Appearance({controller,t,windowOpacity,settingsLauncherAvailable}){
       const h=(type,props,...children)=>React.createElement(type,props?{...props,...Object.fromEntries(['aria-label','title','placeholder'].filter(key=>typeof props[key]==='string').map(key=>[key,localizedText(props[key],t)]))}:props,...children.map(value=>localizedText(value,t)));
       const [state,setState]=React.useState(()=>controller.snapshot());
       const [windowState,setWindowState]=React.useState(()=>windowOpacity?.snapshot?.()??{desktop:false,opacity:100,confirmed:false,available:false,pending:false,error:''});
@@ -215,6 +224,9 @@ window.__ModuleLoader__.load({
         card('03','ウィンドウの不透明度',windowState.desktop
           ?h(React.Fragment,null,h('p',null,'文字を含むウィンドウ全体に適用します。'),h('label',{className:'studio-appearance-field'},h('span',null,'ウィンドウの不透明度'),h('output',null,`${windowDraft}%`)),h('input',{type:'range',min:30,max:100,step:1,value:windowDraft,disabled:!windowState.available||windowState.pending,onChange:e=>setWindowDraft(Number(e.target.value)),'aria-label':'ウィンドウの不透明度'}),h('div',{className:'studio-appearance-actions'},h(Button,{type:'button',size:'sm',variant:'outline',disabled:!windowState.available||windowState.pending,onClick:()=>void windowOpacity.setOpacity(windowDraft)},'適用'),h('span',{className:'studio-appearance-muted'},windowState.confirmed?`${t('windowApplied')} ${windowState.opacity}%`:'未設定')),windowState.error?h('p',{role:'alert',className:'studio-appearance-error'},windowState.error):null,!windowState.available?h(Button,{type:'button',size:'sm',variant:'outline',disabled:windowState.pending,onClick:()=>void windowOpacity.retry()},'もう一度確認'):null)
           :h('p',null,'ウィンドウの透過はDesktopアプリ版のみ利用できます。')),
+        settingsLauncherAvailable?h('label',{className:'studio-appearance-toggle'},h('input',{
+          type:'checkbox',checked:state.settingsOnly,onChange:event=>controller.setPreferences({settingsOnly:event.target.checked}),
+        }),h('span',null,'左下に設定だけを表示')):null,
         state.error?h('p',{role:'alert',className:'studio-appearance-error'},state.error):null);
     }
     function apply(ctx){
@@ -228,8 +240,25 @@ window.__ModuleLoader__.load({
       ctx.effect(()=>ctx.locale.register('studio.appearance','en',en));
       ctx.effect(()=>ctx.locale.register('studio.appearance','ja',ja));
       ctx.effect(()=>{const sync=event=>{if(event.key===KEY)controller.reloadPreferences();};window.addEventListener('storage',sync);return()=>window.removeEventListener('storage',sync);});
-      ctx.slots.inject('settings.general.item',()=>ctx.slots.register({name:'settings.general.item',id:'studio-appearance',order:12,locale:'studio.appearance',inject:()=>({controller,windowOpacity})},Appearance));
+      const launcherSlot='settings.launcher';
+      // The shell owns access, the settings dialog and its keyboard shortcut.
+      // A higher-priority occupant is installed only while the option is on.
+      ctx.slots.inject(launcherSlot,()=>{
+        let unregister;
+        function sync(){
+          if(controller.snapshot().settingsOnly){
+            unregister??=ctx.slots.register({name:launcherSlot,priority:-10,locale:'studio.appearance'},SettingsLauncher);
+          }else if(unregister){
+            unregister();
+            unregister=undefined;
+          }
+        }
+        const unsubscribe=controller.subscribe(sync);
+        sync();
+        return()=>{unsubscribe();unregister?.();};
+      });
+      ctx.slots.inject('settings.general.item',()=>ctx.slots.register({name:'settings.general.item',id:'studio-appearance',order:12,locale:'studio.appearance',inject:()=>({controller,windowOpacity,settingsLauncherAvailable:ctx.slots.spec(launcherSlot)?.kind==='single'})},Appearance));
     }
-    return {inject:['slots','theme','locale'],apply,Appearance,normalize,accentOverrides,contrastColor,validateImage,createController,createWindowOpacityController,imageStore,en,ja,localizedText};
+    return {inject:['slots','theme','locale'],apply,Appearance,SettingsLauncher,normalize,accentOverrides,contrastColor,validateImage,createController,createWindowOpacityController,imageStore,en,ja,localizedText};
   },
 });

@@ -49,6 +49,7 @@ export const STYLE=`
 .studio-appearance-between{justify-content:space-between}
 .studio-appearance code{font-size:11px;color:var(--dsw-alias-label-secondary)}
 .studio-appearance-toggle{display:flex;align-items:center;gap:8px;cursor:pointer}
+.studio-settings-launcher{margin-inline:4px}
 .studio-appearance-swatches{display:flex;flex-wrap:wrap;gap:6px}
 .studio-appearance-swatch>span{display:inline-block;width:11px;height:11px;border-radius:50%;box-shadow:0 0 0 1px var(--dsw-alias-border-l2);margin-right:5px}
 .studio-appearance-swatch[aria-pressed='true']{border-color:var(--dsw-alias-state-business-primary);box-shadow:0 0 0 1px var(--dsw-alias-state-business-primary)}

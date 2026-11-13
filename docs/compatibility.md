@@ -8,6 +8,7 @@ build and profile.
 | Capability | Web | Windows Desktop |
 | --- | --- | --- |
 | Accent and wallpaper | Supported | Supported |
+| Settings-only sidebar footer | Uses the shared Settings launcher slot | Uses the shared Settings launcher slot |
 | Native window opacity | Unavailable: a web page cannot change the browser window's native opacity | Available when explicitly enabled and the owned Desktop window can be identified; affects text and the whole window |
 | Image viewer | Supported | Supported |
 | Japanese language | Built into DSH 0.2.2 | Built into DSH 0.2.2 |
