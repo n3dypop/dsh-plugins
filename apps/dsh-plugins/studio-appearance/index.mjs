@@ -1,5 +1,6 @@
 import {createWindowOpacityRoutes,WINDOW_OPACITY_PATH,WINDOW_OPACITY_PROOF_PATH} from './window-opacity.mjs';
 import {createNativeOpacityAdapter} from './native-adapter.mjs';
+import {localHostOrigin} from '../shared/web-route.mjs';
 export const name='studio-appearance';
 export const inject=['webServer','connection'];
 // Native behavior is an explicit trusted Desktop profile opt-in.
@@ -73,7 +74,7 @@ export function apply(ctx,config={}){
   ctx.on('webserver/index-inject',rows=>rows.push({kind:'style',text:STYLE}));
   if(config.desktopWindowOpacity!==true)return;
   if(process.platform!=='win32'||!process.versions.electron||process.env.ELECTRON_RUN_AS_NODE!=='1')throw Error('Desktop window opacity requires the packaged Windows Desktop Host.');
-  const origin=()=>{const server=ctx.webServer;if(!server||server.host!=='127.0.0.1'||server.protocol!=='http:'||!Number.isInteger(server.port)||server.port<1||server.port>65535||typeof server.getOrigin!=='function')return null;const result=server.getOrigin();return result===`http://127.0.0.1:${server.port}`?result:null;};
+  const origin=()=>localHostOrigin(ctx.webServer);
   const routes=createWindowOpacityRoutes({origin,adapter:createNativeOpacityAdapter()});
   ctx.effect(()=>ctx.connection.fetch.register({path:WINDOW_OPACITY_PROOF_PATH,methods:['GET'],requestBody:'buffered',fetch:routes.proof}));
   ctx.effect(()=>ctx.connection.fetch.register({path:WINDOW_OPACITY_PATH,methods:['GET','POST'],requestBody:'buffered',fetch:routes.action}));

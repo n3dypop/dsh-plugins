@@ -1,4 +1,4 @@
-import {jsonResponse as response,isLocalJsonMutation} from '../shared/web-route.mjs';
+import {jsonResponse as response,isLocalJsonMutation,localHostOrigin} from '../shared/web-route.mjs';
 import {readFile,mkdir} from 'node:fs/promises';
 import {dirname,join} from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -55,12 +55,7 @@ export async function apply(ctx,config){
   if(!desktop)assertWebSessionHost();
   const root=desktop?await resolveDesktopSessions(ctx):runtimeRootOf(config);
   let origin;
-  const hostOrigin=()=>{
-    const server=ctx.webServer;
-    if(server.host==='127.0.0.1'&&server.protocol==='http:'&&Number.isInteger(server.port)&&server.port>0&&
-      server.getOrigin()===`http://127.0.0.1:${server.port}`)return server.getOrigin();
-    return null;
-  };
+  const hostOrigin=()=>localHostOrigin(ctx.webServer);
   function register(path,kind,marker,handler){
     const trust=desktop?desktopSessionTrust(hostOrigin,{path,marker}):null;
     if(trust)ctx.effect(()=>ctx.connection.fetch.register({path:`/api/local-studio/desktop-proof/${kind}`,methods:['GET'],requestBody:'buffered',fetch:request=>{

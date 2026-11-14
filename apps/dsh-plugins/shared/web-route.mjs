@@ -8,6 +8,17 @@ export function jsonResponse(status, value) {
 
 export function isLocalJsonMutation(request, origin, marker) {
   const contentType = request.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase();
-  return request.headers.get('origin') === origin && request.headers.get(marker) === '1'
+  return Boolean(origin) && request.headers.get('origin') === origin && request.headers.get(marker) === '1'
     && request.headers.get('sec-fetch-site') !== 'cross-site' && contentType === 'application/json';
+}
+
+export function localHostOrigin(server) {
+  try {
+    if (server?.host !== '127.0.0.1' || server.protocol !== 'http:' || !Number.isInteger(server.port)
+        || server.port < 1 || server.port > 65535) return null;
+    const origin = server.getOrigin();
+    return origin === `http://127.0.0.1:${server.port}` ? origin : null;
+  } catch {
+    return null;
+  }
 }
