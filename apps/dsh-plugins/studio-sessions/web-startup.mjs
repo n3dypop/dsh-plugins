@@ -30,7 +30,7 @@ export async function apply(ctx,config){
   await assertReviewedRuntime(dshDirectory);
   const release=await acquireWebProfile(paths,dshDirectory);
   ctx.effect(()=>release);
-  await runSessionStartup(ctx,paths,dshDirectory,()=>applyDeletions({
+  await runSessionStartup(ctx,paths,()=>applyDeletions({
     root,settings,paths,stopped:async()=>{
       assertStartupOrder(ctx,paths);
       await assertDshStopped(root,settings,process.pid);

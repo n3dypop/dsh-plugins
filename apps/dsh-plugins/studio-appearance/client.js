@@ -202,27 +202,27 @@ window.__ModuleLoader__.load({
       },[controller]);
       React.useEffect(()=>{if(!windowOpacity)return;const sync=()=>setWindowState(windowOpacity.snapshot());const stop=windowOpacity.subscribe(sync);sync();return stop;},[windowOpacity]);
       React.useEffect(()=>{setWindowDraft(windowState.opacity);},[windowState.opacity]);
-      const card=(number,title,...children)=>h('section',{className:'studio-appearance-card','aria-label':title},
-        h('header',{className:'studio-appearance-card-heading'},h('span',{className:'studio-appearance-number','aria-hidden':true},number),h('h4',null,title)),...children);
+      const card=(title,...children)=>h('section',{className:'studio-appearance-card','aria-label':title},
+        h('h4',null,title),...children);
       const select=(label,value,onChange,choices)=>h('label',{className:'studio-appearance-field'},h('span',null,label),h('select',{value,onChange,'aria-label':label},...choices.map(([key,text])=>h('option',{key,value:key},text))));
       return h('section',{className:'studio-appearance','aria-label':'アクセントと背景'},
         h('header',{className:'studio-appearance-heading'},h('h3',null,'アクセントと背景')),
         h('div',{className:'studio-appearance-preview','aria-label':'プレビュー'},
           h('div',{className:'studio-appearance-preview-bg',style:{backgroundImage:state.wallpaperUrl?`url("${state.wallpaperUrl}")`:undefined,opacity:state.opacity/100,backgroundSize:state.wallpaperFit==='tile'?'auto':state.wallpaperFit,backgroundPosition:state.wallpaperPosition,backgroundRepeat:state.wallpaperFit==='tile'?'repeat':'no-repeat'}}),
-          h('div',{className:'studio-appearance-preview-content'},h('div',{className:'studio-appearance-preview-label'},'DSH APPEARANCE · PREVIEW'),h('strong',null,'Your next creation starts here.'),h('p',null,'The details make the difference.  Aa / あいうえお'),h('div',{className:'studio-appearance-actions'},h('span',{className:'studio-appearance-chip'},'Plugin UI'),h('span',{className:'studio-appearance-preview-accent'},'Accent')))),
-        card('01','アクセント',
+          h('div',{className:'studio-appearance-preview-content'},h('strong',null,'Aa / あいうえお'),h('span',{className:'studio-appearance-preview-accent'},'アクセント'))),
+        card('アクセント',
           h('div',{className:'studio-appearance-actions studio-appearance-between'},h('label',{className:'studio-appearance-toggle'},h('input',{type:'checkbox',checked:state.accentEnabled,onChange:e=>controller.setPreferences({accentEnabled:e.target.checked})}),h('span',null,'カスタム色を使う')),h('code',null,state.accentEnabled?state.accent.toUpperCase():'DSH既定')),
           h('div',{className:'studio-appearance-swatches',role:'group','aria-label':'カラープリセット'},...presets.map(preset=>h(Button,{key:preset.color,type:'button',size:'sm',variant:'outline','aria-pressed':state.accentEnabled&&state.accent===preset.color,onClick:()=>controller.setPreferences({accentEnabled:true,accent:preset.color}),className:'studio-appearance-swatch'},h('span',{'aria-hidden':true,style:{background:preset.color}}),preset.name))),
           h('label',{className:'studio-appearance-field'},h('span',null,'色を選ぶ'),h('input',{type:'color',value:state.accent,onChange:e=>controller.setPreferences({accent:e.target.value,accentEnabled:true}),'aria-label':'アクセント'})),
           h('p',null,'読みやすさを自動調整')),
-        card('02','背景画像',
+        card('背景画像',
           h('input',{ref:fileInput,type:'file',accept:'image/png,image/jpeg,image/webp',style:{display:'none'},onChange:e=>{const file=e.target.files?.[0];e.target.value='';if(file)void controller.setWallpaper(file);},'aria-label':'背景画像を選ぶ',tabIndex:-1}),
           h('div',{className:'studio-appearance-actions'},h(Button,{type:'button',size:'sm',variant:'outline',onClick:()=>fileInput.current?.click()},state.hasWallpaper?'変更':'画像を選ぶ'),h(Button,{type:'button',size:'sm',variant:'ghost',disabled:!state.hasWallpaper,onClick:()=>void controller.clearWallpaper()},'削除'),h('span',{className:'studio-appearance-muted'},state.hasWallpaper?'設定済み':'なし')),
           h('p',null,'PNG / JPEG / WebP · 20 MiB・一辺8192px・40MP以下 · このブラウザーまたはアプリに保存'),
           select('背景の表示範囲',state.wallpaperScope,e=>controller.setPreferences({wallpaperScope:e.target.value}),[['conversation','会話画面'],['window','画面全体']]),
           h('label',{className:'studio-appearance-field'},h('span',null,'濃さ'),h('output',null,`${state.opacity}%`)),h('input',{type:'range',min:0,max:50,step:1,value:state.opacity,onChange:e=>controller.setPreferences({opacity:Number(e.target.value)}),'aria-label':'濃さ'}),
           h('div',{className:'studio-appearance-grid'},select('表示方法',state.wallpaperFit,e=>controller.setPreferences({wallpaperFit:e.target.value}),[['cover','全体に広げる'],['contain','画像全体'],['tile','タイル']]),select('位置',state.wallpaperPosition,e=>controller.setPreferences({wallpaperPosition:e.target.value}),[['center','中央'],['top','上'],['bottom','下']]))),
-        card('03','ウィンドウの不透明度',windowState.desktop
+        card('ウィンドウの不透明度',windowState.desktop
           ?h(React.Fragment,null,h('p',null,'文字を含むウィンドウ全体に適用します。'),h('label',{className:'studio-appearance-field'},h('span',null,'ウィンドウの不透明度'),h('output',null,`${windowDraft}%`)),h('input',{type:'range',min:30,max:100,step:1,value:windowDraft,disabled:!windowState.available||windowState.pending,onChange:e=>setWindowDraft(Number(e.target.value)),'aria-label':'ウィンドウの不透明度'}),h('div',{className:'studio-appearance-actions'},h(Button,{type:'button',size:'sm',variant:'outline',disabled:!windowState.available||windowState.pending,onClick:()=>void windowOpacity.setOpacity(windowDraft)},'適用'),h('span',{className:'studio-appearance-muted'},windowState.confirmed?`${t('windowApplied')} ${windowState.opacity}%`:'未設定')),windowState.error?h('p',{role:'alert',className:'studio-appearance-error'},windowState.error):null,!windowState.available?h(Button,{type:'button',size:'sm',variant:'outline',disabled:windowState.pending,onClick:()=>void windowOpacity.retry()},'もう一度確認'):null)
           :h('p',null,'ウィンドウの透過はDesktopアプリ版のみ利用できます。')),
         settingsLauncherAvailable?h('label',{className:'studio-appearance-toggle'},h('input',{

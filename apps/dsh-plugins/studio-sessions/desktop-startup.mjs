@@ -1,7 +1,7 @@
 import {execFile} from 'node:child_process';
 import {join,win32} from 'node:path';
 import {promisify} from 'node:util';
-import {applyDeletions,desktopRuntime,withDesktopProfileLock} from '../../../scripts/maintenance/Apply-SessionDeletions.mjs';
+import {applyDeletions,assertReviewedRuntime,desktopRuntime,withDesktopProfileLock} from '../../../scripts/maintenance/Apply-SessionDeletions.mjs';
 import {assertLocalDesktopHome,desktopSessionPaths} from './session-store.mjs';
 import {assertStartupOrder,runSessionStartup,samePath} from './startup.mjs';
 
@@ -40,11 +40,14 @@ export async function apply(ctx){
   if(!samePath(dir,join(paths.home,'profiles/desktop')))throw Error('Desktop session home does not match the launched profile');
 
   await assertLocalDesktopHome(paths);
-  await runSessionStartup(ctx,paths,dshDirectory,()=>withDesktopProfileLock(paths,()=>applyDeletions({
-    paths,settings:{dshDirectory},stopped:async()=>{
-      assertStartupOrder(ctx,paths);
-      await assertOnlyDesktopHost(paths);
-      assertStartupOrder(ctx,paths);
-    },
-  })));
+  await runSessionStartup(ctx,paths,async()=>{
+    await assertReviewedRuntime(dshDirectory);
+    await withDesktopProfileLock(paths,()=>applyDeletions({
+      paths,settings:{dshDirectory},stopped:async()=>{
+        assertStartupOrder(ctx,paths);
+        await assertOnlyDesktopHost(paths);
+        assertStartupOrder(ctx,paths);
+      },
+    }));
+  });
 }

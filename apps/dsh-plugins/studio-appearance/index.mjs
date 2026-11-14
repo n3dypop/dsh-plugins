@@ -38,10 +38,7 @@ export const STYLE=`
 .studio-appearance h4{font-size:14px;font-weight:600}
 .studio-appearance p,.studio-appearance-muted{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.6}
 .studio-appearance-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-.studio-appearance-chip{border:1px solid var(--dsw-alias-border-l2);border-radius:999px;background:var(--dsw-alias-bg-layer-2);padding:3px 9px;font-size:11px;white-space:nowrap;color:var(--dsw-alias-label-secondary)}
 .studio-appearance-card{display:grid;gap:14px;padding:18px;border:1px solid var(--dsw-alias-border-l2);border-radius:12px;background:var(--dsw-alias-bg-layer-2);min-width:0}
-.studio-appearance-card-heading{display:flex;align-items:flex-start;gap:10px;margin-bottom:2px}
-.studio-appearance-number{display:grid;place-items:center;width:28px;height:28px;flex-shrink:0;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;font-size:11px;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-base)}
 .studio-appearance .studio-appearance-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .studio-appearance-between{justify-content:space-between}
 .studio-appearance code{font-size:11px;color:var(--dsw-alias-label-secondary)}
@@ -61,8 +58,7 @@ export const STYLE=`
 .studio-appearance-grid .studio-appearance-field{align-items:stretch;flex-direction:column;gap:6px}
 .studio-appearance-preview{position:relative;overflow:hidden;isolation:isolate;border:1px solid var(--dsw-alias-border-l2);border-radius:12px;background:var(--dsw-alias-bg-base);min-height:170px}
 .studio-appearance-preview-bg{position:absolute;inset:0;z-index:-1;pointer-events:none}
-.studio-appearance-preview-content{display:grid;gap:10px;padding:22px}
-.studio-appearance-preview-label{font-size:10px;letter-spacing:.12em;color:var(--dsw-alias-label-secondary)}
+.studio-appearance-preview-content{display:grid;justify-items:start;gap:10px;padding:22px}
 .studio-appearance-preview-content>strong{font-size:19px;line-height:1.5;font-weight:600}
 .studio-appearance-preview-accent{border-radius:8px;background:var(--dsw-alias-button-info-fill);color:white;padding:5px 10px;font-size:11px}
 .studio-appearance .studio-appearance-error{padding:10px 12px;border:1px solid var(--dsw-alias-border-l2);border-left:3px solid var(--dsw-alias-state-business-primary);border-radius:8px;color:var(--dsw-alias-label-primary)}

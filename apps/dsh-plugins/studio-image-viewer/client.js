@@ -109,15 +109,25 @@ window.__ModuleLoader__.load({
     }
     function GalleryImage({image,loadImage,variant,labels}){
       const attachment=image?.attachment,preview=image?.preview;
-      const peek=()=>{try{return attachment?loadImage?.peek?.(attachment)??null:null;}catch{return null;}};
-      const [loaded,setLoaded]=useState(()=>({attachment,loader:loadImage,url:peek()})),[error,setError]=useState(false),[attempt,setAttempt]=useState(0),[open,setOpen]=useState(false);
-      const close=useCallback(()=>setOpen(false),[]);
-      useEffect(()=>{if(!attachment)return;let live=true;setLoaded({attachment,loader:loadImage,url:peek()});setOpen(false);setError(false);Promise.resolve().then(()=>loadImage(attachment)).then(value=>{if(!live)return;if(typeof value!=='string'||!value)throw Error('Authorized image unavailable');setLoaded({attachment,loader:loadImage,url:value});}).catch(()=>{if(live)setError(true);});return()=>{live=false;};},[attachment,loadImage,attempt]);
-      // A preview can only arrive as an explicit browser-owned source. No URL
-      // argument, path, network fetch or independent attachment lookup is added.
+      // A preview must be an explicit browser-owned source.
       const localPreview=preview&&typeof preview.url==='string'&&/^(blob:|data:image\/(?:png|jpeg|webp|gif);base64,)/i.test(preview.url)?preview.url:null;
+      const peek=()=>{try{return attachment?loadImage?.peek?.(attachment)??null:null;}catch{return null;}};
+      const [loaded,setLoaded]=useState(()=>({attachment,loader:loadImage,url:localPreview?null:peek()})),[error,setError]=useState(false),[attempt,setAttempt]=useState(0),[open,setOpen]=useState(false);
+      const close=useCallback(()=>setOpen(false),[]);
+      useEffect(()=>{
+        let live=true;
+        setOpen(false);setError(false);
+        if(localPreview||!attachment)return;
+        setLoaded({attachment,loader:loadImage,url:peek()});
+        Promise.resolve().then(()=>loadImage(attachment)).then(value=>{
+          if(!live)return;
+          if(typeof value!=='string'||!value)throw Error('Authorized image unavailable');
+          setLoaded({attachment,loader:loadImage,url:value});
+        }).catch(()=>{if(live)setError(true);});
+        return()=>{live=false;};
+      },[localPreview,attachment,loadImage,attempt]);
       const src=localPreview??(loaded?.attachment===attachment&&loaded?.loader===loadImage?loaded.url:null),label=image?.label??preview?.name??attachment?.name??labels.image;
-      if(error)return h(Button,{type:'button',size:'sm',variant:'outline',onClick:()=>setAttempt(x=>x+1),'aria-label':labels.loadFailed},labels.loadFailed);
+      if(error&&!src)return h(Button,{type:'button',size:'sm',variant:'outline',onClick:()=>setAttempt(x=>x+1),'aria-label':labels.loadFailed},labels.loadFailed);
       return h('div',null,h(Button,{type:'button',variant:'outline',className:'siv-thumb',style:thumbnailSize(image,variant),title:src?labels.open:labels.loading,'aria-label':src?labels.openNamed(label):labels.loading,'aria-busy':!src||undefined,onClick:()=>{if(src)setOpen(true);}},src?h('img',{src,alt:label,draggable:false}):h('span',{className:'siv-loading'},labels.loading)),open&&src?h(ImageViewer,{src,alt:label,dimensions:attachment??preview,labels:labels.lightbox,onClose:close}):null);
     }
     function ImageContent(props){

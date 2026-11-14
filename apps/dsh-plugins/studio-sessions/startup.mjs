@@ -1,5 +1,4 @@
 import {join,resolve} from 'node:path';
-import {assertReviewedRuntime} from '../../../scripts/maintenance/Apply-SessionDeletions.mjs';
 import {readQueue} from './session-store.mjs';
 
 export const startupService='studioSessionStartup';
@@ -25,7 +24,7 @@ export function assertStartupOrder(ctx,paths){
   }
 }
 
-export async function runSessionStartup(ctx,paths,dshDirectory,processPending){
+export async function runSessionStartup(ctx,paths,processPending){
   // A reload of profile configuration during a live Host must never delete history.
   let alreadyReady=false;
   ctx.appReady.onReady(()=>{alreadyReady=true;})();
@@ -37,7 +36,6 @@ export async function runSessionStartup(ctx,paths,dshDirectory,processPending){
       if(query&&!query.disabled&&query.options.config?.openAt!=='never'){
         throw Error('Session Library requires full-text session indexing to be disabled');
       }
-      await assertReviewedRuntime(dshDirectory);
       await processPending();
     }
   }

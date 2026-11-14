@@ -41,6 +41,19 @@ test('missing or failed translations use complete English viewer copy',()=>{
   const supplied={image:'Custom',lightbox:{zoomLevel:'Custom zoom'}};assert.equal(api.labelsFor({labels:supplied}),supplied);
 });
 
+test('an explicit local image preview does not read the saved attachment',async()=>{
+  const effects=[];
+  const api=viewer({createElement(type,props,...children){return{type,props,children};},
+    useState(value){return[typeof value==='function'?value():value,()=>{}];},useEffect(fn){effects.push(fn);},useCallback:fn=>fn});
+  let calls=0;
+  const loadImage=Object.assign(()=>{calls++;return 'blob:stored';},{peek(){calls++;return 'blob:stored';}});
+  const card=api.GalleryImage({image:{preview:{url:'blob:preview'},attachment:{name:'saved.png'}},loadImage,labels:api.labelsFor({})});
+  for(const effect of effects)effect();
+  await new Promise(setImmediate);
+  assert.equal(calls,0);
+  assert.equal(card.children[0].children[0].props.src,'blob:preview');
+});
+
 test('rendered ARIA and image error copy follow the viewer locale while action identities stay stable',()=>{
   const state=[];let cursor=0;
   const api=viewer({createElement(type,props,...children){return{type,props:props??{},children};},useState(initial){const index=cursor++;if(!(index in state))state[index]=typeof initial==='function'?initial():initial;return[state[index],value=>{state[index]=typeof value==='function'?value(state[index]):value;}];},useRef(value){return{current:value};},useEffect(){},useCallback:fn=>fn});
