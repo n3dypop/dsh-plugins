@@ -26,6 +26,8 @@ Preserve the startup receipt, generation identity and configured launcher;
 unknown ownership must fail closed. Session deletion requires a supported
 persistence format and the startup plugin for the active profile.
 
+## Session Library startup
+
 For Session Library, private `config/environment.json` must declare the supported
 layout. This is a minimal adapter fragment, not a complete DSH configuration:
 

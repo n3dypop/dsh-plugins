@@ -37,9 +37,9 @@ Keep them when updating instead of registering renamed duplicates.
 The supported targets are DSH Web **0.2.1-rc.5**, **0.2.2-rc.1**, and
 **0.2.2-rc.3**, and Windows Desktop **0.2.2-rc.1** and **0.2.2-rc.3**,
 with Node.js **24**. Windows-specific session persistence and restart adapters
-require Windows and PowerShell 7. Other platforms need their own verified
-adapters before those operations are enabled. Session Library and host restart
-are Web-only; see the [compatibility matrix](docs/compatibility.md).
+require Windows and PowerShell 7. Session Library supports Windows Web and
+Desktop 0.2.2-rc.3 with the matching startup plugin. Host restart is Web-only.
+See the [compatibility matrix](docs/compatibility.md).
 
 From your DSH checkout, clone this repository into its local extension area:
 
@@ -60,8 +60,9 @@ of the same plugin.
 For Desktop, keep a separate clone outside the profile's `node_modules`, for
 example under `%USERPROFILE%\.dsh\plugins\n3dypop\dsh-plugins`. Initialize
 Desktop once, fully quit it, and use its bundled `dsh` command to add the clone
-as a `link:` bundle to the Desktop profile. Enable and configure entries in that
-profile; leave `studio-sessions` and `studio-host` disabled. The Web and Desktop
+as a `link:` bundle to the Desktop profile. Enable the desired entries there. For
+Session Library, follow the [Desktop startup configuration](docs/configuration.md#session-library-startup).
+Keep `studio-host` disabled in Desktop. The Web and Desktop
 clones may track the same remote, while their profiles and conversations remain
 separate. Review changes and use fast-forward-only updates with the target Host
 stopped; do not overwrite local changes or share profile package-manager files.
