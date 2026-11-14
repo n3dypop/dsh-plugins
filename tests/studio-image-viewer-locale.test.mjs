@@ -69,3 +69,24 @@ test('rendered ARIA and image error copy follow the viewer locale while action i
   assert.equal(renderedJa.find(node=>node.props.role==='alert').children[0],api.dictionaries.ja['image.renderFailed']);
   assert.deepEqual(renderedJa.flatMap(node=>node.props['data-siv-action']??[]),renderedEn.flatMap(node=>node.props['data-siv-action']??[]));
 });
+
+test('comparison can reopen an earlier attachment using the same authorized conversation loader',async()=>{
+  const state=[];let cursor=0;
+  const api=viewer({createElement(type,props,...children){return{type,props:props??{},children};},useState(initial){const index=cursor++;if(!(index in state))state[index]=typeof initial==='function'?initial():initial;return[state[index],value=>{state[index]=value;}];},useRef(value){return{current:value};},useEffect(){},useCallback:fn=>fn});
+  const seen=[],loader=async attachment=>{seen.push(attachment.attachmentId);return 'blob:old';};
+  const render=(id,loadImage=loader)=>{
+    cursor=0;
+    return api.ImageViewer({src:'blob:'+id,alt:id,attachment:{attachmentId:id},onClose(){},loadImage});
+  };
+  const nodes=tree=>tree&&typeof tree==='object'?[tree,...tree.children.flatMap(nodes)]:[];
+  nodes(render('old')).find(node=>node.children[0]==='Use as Before').props.onClick();
+  state.length=0;
+  nodes(render('new')).find(node=>node.children[0]==='Compare').props.onClick();
+  await new Promise(setImmediate);
+  const comparison=nodes(render('new')).find(node=>node.props.className==='siv-comparison');
+  assert.deepEqual(nodes(comparison).filter(node=>node.type==='img').map(node=>node.props.src),['blob:old','blob:new']);
+  assert.deepEqual(seen,['old']);
+  state.length=0;
+  nodes(render('other',async()=>assert.fail('pin escaped the conversation loader'))).find(node=>node.children[0]==='Compare').props.onClick();
+  assert.equal(nodes(render('other')).find(node=>node.type==='figcaption').children[0],'Before');
+});

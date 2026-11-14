@@ -73,9 +73,20 @@ The plugins add their controls to native Settings. Select Japanese in DSH under
 **General → Language**. Under **General → Accent & wallpaper**, adjust the
 accent and wallpaper or enable **Show only Settings in the sidebar footer**.
 Turning it off restores the account menu. Windows Desktop also supports window
-opacity in the same section. Click an image attachment to open the viewer.
+opacity in the same section. While a modal is open, the window is opaque.
+Choose a wallpaper and drag over the area to keep before saving. You can also
+adjust the crop with the four range controls.
+
+Click an image attachment to open the viewer. To compare two results across
+messages, open the older image and choose **Use as Before**, then open the newer
+image in the same conversation and choose **Compare**. You can also select
+another attachment in the same image group or open a local image for comparison.
 
 **Session Library** supports filtering, selection and workspace appearance.
+In the left sidebar, use a session's menu to preview and schedule deletion.
+Scheduled sessions move to **Deletion queued**, where you can cancel the
+reservation or hide the category with the deletion filter. Session Library can
+also show only scheduled sessions or filter them out.
 Permanent deletion is previewed and reserved, then applied when the Web Host
 or Desktop next starts with its startup plugin enabled. Shared attachments and
 external production outputs are not deleted by this action. Unsupported,

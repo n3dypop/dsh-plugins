@@ -123,9 +123,10 @@ window.__ModuleLoader__.load({
         if(alive&&version===0){paint(checked);notify();}
       }).catch(()=>{if(alive&&version===0){error='保存済みの背景画像を読み込めません。';notify();}});
       async function setWallpaper(file){
-        const current=++version;error='';
-        try{const checked=await validateImage(file,decode);if(!alive||current!==version)return;assetChain=assetChain.catch(()=>{}).then(async()=>{if(!alive||current!==version)return;await imageStore(indexedDB,'put',checked);if(alive&&current===version)paint(checked);});await assetChain;}
+        const current=++version;error='';let saved=false;
+        try{const checked=await validateImage(file,decode);if(!alive||current!==version)return false;assetChain=assetChain.catch(()=>{}).then(async()=>{if(!alive||current!==version)return;await imageStore(indexedDB,'put',checked);if(alive&&current===version){paint(checked);saved=true;}});await assetChain;}
         catch(e){if(alive&&current===version)error=e?.message||'背景画像を保存できません。';}if(alive&&current===version)notify();
+        return saved;
       }
       async function clearWallpaper(){
         const current=++version;error='';try{assetChain=assetChain.catch(()=>{}).then(async()=>{if(!alive||current!==version)return;await imageStore(indexedDB,'delete');if(alive&&current===version)paint(null);});await assetChain;}catch(e){if(alive&&current===version)error=e?.message||'背景画像を削除できません。';}if(alive&&current===version)notify();
@@ -141,22 +142,33 @@ window.__ModuleLoader__.load({
         dispose(){alive=false;version++;disposeAccent?.();if(objectUrl)urlApi.revokeObjectURL(objectUrl);for(const key of ['image','opacity','size','repeat','position'])doc.body.style.removeProperty(`--studio-wallpaper-${key}`);doc.body.removeAttribute('data-studio-wallpaper');doc.body.removeAttribute('data-studio-wallpaper-scope');listeners.clear();}};
     }
     function createWindowOpacityController({desktop,storage,fetchImpl}){
-      let opacity=100,confirmed=false,available=false,pending=false,initializing=false,uncertain=false,error='',alive=true;
+      let opacity=100,confirmed=false,available=false,pending=false,initializing=false,uncertain=false,error='',alive=true,modal=false,applied=null;
       const listeners=new Set(),notify=()=>{if(alive)for(const listener of listeners)listener();};
       const valid=value=>Number.isInteger(value)&&value>=30&&value<=100;
       const snapshot=()=>({desktop,opacity,confirmed,available,pending:pending||initializing,error});
-      async function apply(value){
-        if(!alive||!desktop||!valid(value)||pending||initializing)return;
+      async function synchronize(preference=opacity){
+        const value=modal?100:preference;
+        if(!alive||!desktop||pending||initializing)return;
+        if(applied===value&&confirmed)return true;
         pending=true;confirmed=false;error='';notify();
         try{
           const first=await fetchImpl('/api/studio-appearance/window-opacity-proof',{credentials:'same-origin',cache:'no-store',headers:{'X-Studio-Window-Proof-Request':'1'}});
           if(!first.ok)throw Error('proof');const proof=(await first.json())?.proof;if(typeof proof!=='string')throw Error('proof');
           const response=await fetchImpl('/api/studio-appearance/window-opacity',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json','X-Studio-Window-Action':'1','X-Studio-Window-Proof':proof},body:JSON.stringify({opacity:value})});
           if(!response.ok)throw Error('apply');const result=await response.json();if(result?.available!==true||result.opacity!==value)throw Error('unconfirmed');
-          opacity=value;confirmed=true;uncertain=false;available=true;try{storage.setItem(WINDOW_KEY,String(value));}catch{error='不透明度を適用しましたが、設定を保存できません。';}
+          applied=value;confirmed=true;uncertain=false;available=true;return true;
         }catch{confirmed=false;uncertain=true;available=false;error='ウィンドウの不透明度を確認できません。';}
         finally{pending=false;notify();}
       }
+      async function apply(value){
+        if(!alive||!desktop||!valid(value)||pending||initializing)return;
+        if(!await synchronize(value))return;
+        opacity=value;
+        try{storage.setItem(WINDOW_KEY,String(value));notify();}
+        catch{error='このブラウザーまたはアプリに設定を保存できません。';notify();}
+        if(applied!==(modal?100:opacity))void synchronize();
+      }
+      function setModal(value){if(modal!==value){modal=value;if(available)void synchronize().then(ok=>{if(ok&&applied!==(modal?100:opacity))void synchronize();});}}
       async function initialize(){
         if(!alive||!desktop||pending||initializing)return;
         initializing=true;notify();
@@ -168,16 +180,34 @@ window.__ModuleLoader__.load({
           available=true;
           if(uncertain){confirmed=false;error='直前の結果は不明です。値を選び、適用して確認してください。';return;}
           confirmed=valid(state.opacity);
+          applied=state.opacity;
           if(confirmed)opacity=state.opacity;
           let saved=null;try{const value=storage.getItem(WINDOW_KEY);saved=value===null?null:Number(value);}catch{}
           if(!valid(saved))saved=null;
           initializing=false;
-          if(alive&&saved!==null&&state.opacity!==saved)await apply(saved);
+          if(saved!==null)opacity=saved;
+          if(alive&&(saved!==null||modal)){await synchronize();if(available&&applied!==(modal?100:opacity))void synchronize();}
         }catch{confirmed=false;available=false;error='ウィンドウの不透明度を確認できません。';}
         finally{initializing=false;notify();}
       }
       void initialize();
-      return {snapshot,subscribe(fn){listeners.add(fn);return()=>listeners.delete(fn);},setOpacity:apply,retry:initialize,dispose(){alive=false;listeners.clear();}};
+      return {snapshot,subscribe(fn){listeners.add(fn);return()=>listeners.delete(fn);},setOpacity:apply,setModal,retry:initialize,dispose(){alive=false;listeners.clear();}};
+    }
+
+    function cropBounds(width,height,{x=0,y=0,w=100,h=100}={}){
+      const left=Math.min(width-1,Math.floor(width*x/100)),top=Math.min(height-1,Math.floor(height*y/100));
+      return [left,top,Math.max(1,Math.min(width-left,Math.round(width*w/100))),Math.max(1,Math.min(height-top,Math.round(height*h/100)))];
+    }
+    async function cropWallpaper(file,area,decode,doc){
+      await validateImage(file,decode);
+      if(area.x===0&&area.y===0&&area.w===100&&area.h===100)return file;
+      const bitmap=await decode(file);
+      try{
+        const [x,y,w,h]=cropBounds(bitmap.width,bitmap.height,area),canvas=doc.createElement('canvas');
+        const scale=Math.min(1,4096/Math.max(w,h));canvas.width=Math.max(1,Math.round(w*scale));canvas.height=Math.max(1,Math.round(h*scale));
+        canvas.getContext('2d').drawImage(bitmap,x,y,w,h,0,0,canvas.width,canvas.height);
+        return await new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(Error('背景画像を保存できません。')),'image/webp',0.94));
+      }finally{bitmap.close?.();}
     }
     function SettingsLauncher({openSettings,settingsOpen,settingsShortcut,wide,t}){
       return React.createElement(Button,{
@@ -191,7 +221,33 @@ window.__ModuleLoader__.load({
       const [state,setState]=React.useState(()=>controller.snapshot());
       const [windowState,setWindowState]=React.useState(()=>windowOpacity?.snapshot?.()??{desktop:false,opacity:100,confirmed:false,available:false,pending:false,error:''});
       const [windowDraft,setWindowDraft]=React.useState(()=>windowOpacity?.snapshot?.().opacity??100);
-      const fileInput=React.useRef(null);
+      const [source,setSource]=React.useState(null),[crop,setCrop]=React.useState({x:0,y:0,w:100,h:100}),[cropping,setCropping]=React.useState(false),[cropError,setCropError]=React.useState('');
+      const fileInput=React.useRef(null),fileRequest=React.useRef(0),cropStart=React.useRef(null);
+      React.useEffect(()=>source?()=>URL.revokeObjectURL(source.url):undefined,[source]);
+      React.useEffect(()=>()=>{fileRequest.current++;},[]);
+      const cropFields=[['x','左','Left'],['y','上','Top'],['w','幅','Width'],['h','高さ','Height']];
+      const japanese=t('title')==='アクセントと背景';
+      const pick=(ja,en)=>japanese?ja:en;
+      async function choose(file){
+        const request=++fileRequest.current;setCropError('');
+        try{await validateImage(file,window.createImageBitmap?.bind(window));if(request!==fileRequest.current)return;setCrop({x:0,y:0,w:100,h:100});setSource({file,url:URL.createObjectURL(file)});}
+        catch(error){if(request===fileRequest.current)setCropError(error.message);}
+      }
+      async function saveCrop(){
+        fileRequest.current++;setCropping(true);setCropError('');
+        try{if(await controller.setWallpaper(await cropWallpaper(source.file,crop,window.createImageBitmap.bind(window),document)))setSource(null);}
+        catch(error){setCropError(error.message);}finally{setCropping(false);}
+      }
+      function cropPoint(event){
+        const rect=event.currentTarget.getBoundingClientRect();
+        return {x:Math.max(0,Math.min(100,Math.round(100*(event.clientX-rect.left)/rect.width))),y:Math.max(0,Math.min(100,Math.round(100*(event.clientY-rect.top)/rect.height)))};
+      }
+      function drawCrop(event){
+        const start=cropStart.current;
+        if(start?.id!==event.pointerId)return;
+        const end=cropPoint(event),w=Math.abs(end.x-start.x),h=Math.abs(end.y-start.y);
+        if(w>=1&&h>=1)setCrop({x:Math.min(start.x,end.x),y:Math.min(start.y,end.y),w,h});
+      }
       React.useEffect(()=>{
         const sync=()=>setState(controller.snapshot());
         const unsubscribe=controller.subscribe(sync);
@@ -209,21 +265,36 @@ window.__ModuleLoader__.load({
         h('header',{className:'studio-appearance-heading'},h('h3',null,'アクセントと背景')),
         h('div',{className:'studio-appearance-preview','aria-label':'プレビュー'},
           h('div',{className:'studio-appearance-preview-bg',style:{backgroundImage:state.wallpaperUrl?`url("${state.wallpaperUrl}")`:undefined,opacity:state.opacity/100,backgroundSize:state.wallpaperFit==='tile'?'auto':state.wallpaperFit,backgroundPosition:state.wallpaperPosition,backgroundRepeat:state.wallpaperFit==='tile'?'repeat':'no-repeat'}}),
-          h('div',{className:'studio-appearance-preview-content'},h('strong',null,'Aa / あいうえお'),h('span',{className:'studio-appearance-preview-accent'},'アクセント'))),
+          h('div',{className:'studio-appearance-preview-content',style:{display:'grid',gap:8,width:'100%',justifyItems:'stretch'}},
+            h('div',{style:{display:'flex',gap:8,justifyContent:'space-between'}},h('strong',null,'Aa / あいうえお'),h('span',{className:'studio-appearance-preview-accent'},'アクセント')),
+            h('div',{style:{display:'grid',gridTemplateColumns:'1fr 2fr',gap:8},'aria-hidden':true},
+              h('div',{style:{display:'grid',gap:4,padding:6,borderRadius:8,background:'var(--dsw-alias-bg-layer-2)'}},h('span',null,pick('ワークスペース','Workspace')),h('span',{className:'studio-appearance-preview-accent'},pick('選択中の会話','Selected chat'))),
+              h('div',{style:{display:'grid',gap:6,padding:6,border:'1px solid var(--dsw-alias-border-l2)',borderRadius:8}},h('span',{style:{justifySelf:'end',padding:'4px 8px',borderRadius:8,background:'var(--dsw-alias-bg-layer-2)'}},pick('メッセージ','Message')),h('span',{style:{display:'flex',justifyContent:'space-between',padding:6,borderRadius:8,background:'var(--dsw-alias-bg-layer-1)'}},pick('入力欄','Composer'),h('span',{className:'studio-appearance-preview-accent'},'↑')))))),
         card('アクセント',
           h('div',{className:'studio-appearance-actions studio-appearance-between'},h('label',{className:'studio-appearance-toggle'},h('input',{type:'checkbox',checked:state.accentEnabled,onChange:e=>controller.setPreferences({accentEnabled:e.target.checked})}),h('span',null,'カスタム色を使う')),h('code',null,state.accentEnabled?state.accent.toUpperCase():'DSH既定')),
           h('div',{className:'studio-appearance-swatches',role:'group','aria-label':'カラープリセット'},...presets.map(preset=>h(Button,{key:preset.color,type:'button',size:'sm',variant:'outline','aria-pressed':state.accentEnabled&&state.accent===preset.color,onClick:()=>controller.setPreferences({accentEnabled:true,accent:preset.color}),className:'studio-appearance-swatch'},h('span',{'aria-hidden':true,style:{background:preset.color}}),preset.name))),
           h('label',{className:'studio-appearance-field'},h('span',null,'色を選ぶ'),h('input',{type:'color',value:state.accent,onChange:e=>controller.setPreferences({accent:e.target.value,accentEnabled:true}),'aria-label':'アクセント'})),
           h('p',null,'読みやすさを自動調整')),
         card('背景画像',
-          h('input',{ref:fileInput,type:'file',accept:'image/png,image/jpeg,image/webp',style:{display:'none'},onChange:e=>{const file=e.target.files?.[0];e.target.value='';if(file)void controller.setWallpaper(file);},'aria-label':'背景画像を選ぶ',tabIndex:-1}),
-          h('div',{className:'studio-appearance-actions'},h(Button,{type:'button',size:'sm',variant:'outline',onClick:()=>fileInput.current?.click()},state.hasWallpaper?'変更':'画像を選ぶ'),h(Button,{type:'button',size:'sm',variant:'ghost',disabled:!state.hasWallpaper,onClick:()=>void controller.clearWallpaper()},'削除'),h('span',{className:'studio-appearance-muted'},state.hasWallpaper?'設定済み':'なし')),
+          h('input',{ref:fileInput,type:'file',accept:'image/png,image/jpeg,image/webp',style:{display:'none'},onChange:e=>{const file=e.target.files?.[0];e.target.value='';if(file)void choose(file);},'aria-label':'背景画像を選ぶ',tabIndex:-1}),
+          h('div',{className:'studio-appearance-actions'},h(Button,{type:'button',size:'sm',variant:'outline',disabled:cropping,onClick:()=>fileInput.current?.click()},state.hasWallpaper?'変更':'画像を選ぶ'),h(Button,{type:'button',size:'sm',variant:'ghost',disabled:!state.hasWallpaper||cropping,onClick:()=>void controller.clearWallpaper()},'削除'),h('span',{className:'studio-appearance-muted'},state.hasWallpaper?'設定済み':'なし')),
+          source?h('section',{'aria-label':pick('切り抜き','Crop')},h('p',null,pick('画像をドラッグして範囲を指定','Drag on the image to select a crop')),h('div',{style:{position:'relative',width:'fit-content',maxWidth:'100%',margin:'8px auto',overflow:'hidden',touchAction:'none',cursor:'crosshair'},
+            onPointerDown:e=>{if(cropping||!e.isPrimary||e.button!==0)return;cropStart.current={...cropPoint(e),id:e.pointerId};e.currentTarget.setPointerCapture(e.pointerId);},
+            onPointerMove:drawCrop,onPointerUp:e=>{drawCrop(e);cropStart.current=null;},onLostPointerCapture:()=>{cropStart.current=null;}},
+            h('img',{src:source.url,alt:pick('切り抜き元','Crop source'),draggable:false,style:{display:'block',maxWidth:'100%',maxHeight:'28vh',width:'auto',height:'auto'}}),
+            h('div',{'aria-hidden':true,style:{position:'absolute',left:`${crop.x}%`,top:`${crop.y}%`,width:`${crop.w}%`,height:`${crop.h}%`,outline:'2px solid white',boxShadow:'0 0 0 100vmax #0008',pointerEvents:'none'}})),
+            h('div',{className:'studio-appearance-grid'},...cropFields.map(([key,ja,en])=>{
+              const min=key==='x'||key==='y'?0:1;
+              const max={x:100-crop.w,y:100-crop.h,w:100-crop.x,h:100-crop.y}[key];
+              return h('label',{key},`${pick(ja,en)} ${crop[key]}%`,h('input',{type:'range',min,max,step:1,value:crop[key],disabled:cropping,onChange:e=>setCrop({...crop,[key]:Number(e.target.value)})}));
+            })),h('div',{className:'studio-appearance-actions'},h(Button,{type:'button',size:'sm',disabled:cropping,onClick:()=>void saveCrop()},pick('この範囲を使う','Use crop')),h(Button,{type:'button',size:'sm',disabled:cropping,onClick:()=>setSource(null)},pick('取消','Cancel')))):null,
+          cropError?h('p',{role:'alert'},cropError):null,
           h('p',null,'PNG / JPEG / WebP · 20 MiB・一辺8192px・40MP以下 · このブラウザーまたはアプリに保存'),
           select('背景の表示範囲',state.wallpaperScope,e=>controller.setPreferences({wallpaperScope:e.target.value}),[['conversation','会話画面'],['window','画面全体']]),
           h('label',{className:'studio-appearance-field'},h('span',null,'濃さ'),h('output',null,`${state.opacity}%`)),h('input',{type:'range',min:0,max:50,step:1,value:state.opacity,onChange:e=>controller.setPreferences({opacity:Number(e.target.value)}),'aria-label':'濃さ'}),
           h('div',{className:'studio-appearance-grid'},select('表示方法',state.wallpaperFit,e=>controller.setPreferences({wallpaperFit:e.target.value}),[['cover','全体に広げる'],['contain','画像全体'],['tile','タイル']]),select('位置',state.wallpaperPosition,e=>controller.setPreferences({wallpaperPosition:e.target.value}),[['center','中央'],['top','上'],['bottom','下']]))),
         card('ウィンドウの不透明度',windowState.desktop
-          ?h(React.Fragment,null,h('p',null,'文字を含むウィンドウ全体に適用します。'),h('label',{className:'studio-appearance-field'},h('span',null,'ウィンドウの不透明度'),h('output',null,`${windowDraft}%`)),h('input',{type:'range',min:30,max:100,step:1,value:windowDraft,disabled:!windowState.available||windowState.pending,onChange:e=>setWindowDraft(Number(e.target.value)),'aria-label':'ウィンドウの不透明度'}),h('div',{className:'studio-appearance-actions'},h(Button,{type:'button',size:'sm',variant:'outline',disabled:!windowState.available||windowState.pending,onClick:()=>void windowOpacity.setOpacity(windowDraft)},'適用'),h('span',{className:'studio-appearance-muted'},windowState.confirmed?`${t('windowApplied')} ${windowState.opacity}%`:'未設定')),windowState.error?h('p',{role:'alert',className:'studio-appearance-error'},windowState.error):null,!windowState.available?h(Button,{type:'button',size:'sm',variant:'outline',disabled:windowState.pending,onClick:()=>void windowOpacity.retry()},'もう一度確認'):null)
+          ?h(React.Fragment,null,h('p',null,pick('設定などのモーダルを開いている間は100%で表示します。','The window stays at 100% while a modal is open.')),h('label',{className:'studio-appearance-field'},h('span',null,'ウィンドウの不透明度'),h('output',null,`${windowDraft}%`)),h('input',{type:'range',min:30,max:100,step:1,value:windowDraft,disabled:!windowState.available||windowState.pending,onChange:e=>setWindowDraft(Number(e.target.value)),'aria-label':'ウィンドウの不透明度'}),h('div',{className:'studio-appearance-actions'},h(Button,{type:'button',size:'sm',variant:'outline',disabled:!windowState.available||windowState.pending,onClick:()=>void windowOpacity.setOpacity(windowDraft)},'適用'),h('span',{className:'studio-appearance-muted'},windowState.confirmed?`${t('windowApplied')} ${windowState.opacity}%`:'未設定')),windowState.error?h('p',{role:'alert',className:'studio-appearance-error'},windowState.error):null,!windowState.available?h(Button,{type:'button',size:'sm',variant:'outline',disabled:windowState.pending,onClick:()=>void windowOpacity.retry()},'もう一度確認'):null)
           :h('p',null,'ウィンドウの透過はDesktopアプリ版のみ利用できます。')),
         settingsLauncherAvailable?h('label',{className:'studio-appearance-toggle'},h('input',{
           type:'checkbox',checked:state.settingsOnly,onChange:event=>controller.setPreferences({settingsOnly:event.target.checked}),
@@ -238,6 +309,11 @@ window.__ModuleLoader__.load({
       const windowOpacity=createWindowOpacityController({desktop:window.location?.protocol==='dsh-app:'&&window.location?.host==='app',storage,fetchImpl:window.fetch.bind(window)});
       ctx.effect(()=>()=>controller.dispose());
       ctx.effect(()=>()=>windowOpacity.dispose());
+      if(windowOpacity.snapshot().desktop)ctx.effect(()=>{
+        const update=()=>windowOpacity.setModal([...document.querySelectorAll('[role="dialog"][aria-modal="true"],dialog[open]')].some(element=>element.getClientRects().length&&!element.closest('[hidden],[aria-hidden="true"]')));
+        const observer=new MutationObserver(update);observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['open','hidden','aria-hidden','aria-modal']});update();
+        return()=>observer.disconnect();
+      });
       ctx.effect(()=>ctx.locale.register('studio.appearance','en',en));
       ctx.effect(()=>ctx.locale.register('studio.appearance','ja',ja));
       ctx.effect(()=>{const sync=event=>{if(event.key===KEY)controller.reloadPreferences();};window.addEventListener('storage',sync);return()=>window.removeEventListener('storage',sync);});

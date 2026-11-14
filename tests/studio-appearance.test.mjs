@@ -180,6 +180,31 @@ test('moving the opacity slider only changes a draft; Apply performs the operati
   const apply=tree.find(node=>node.type==='button'&&node.children.includes('適用'));assert.ok(apply);apply.props.onClick();assert.deepEqual(sent,[100]);
 });
 
+test('Desktop modals temporarily suspend opacity and restore the latest saved value',async()=>{
+  const api=appearance(),values=new Map([['studio-appearance.window-opacity.v1','60']]),applied=[];
+  const storage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)};
+  const controller=api.createWindowOpacityController({desktop:true,storage,async fetchImpl(path,options={}){
+    if(path.endsWith('/window-opacity-proof'))return {ok:true,json:async()=>({proof:'test'})};
+    if(options.method==='POST'){
+      const {opacity}=JSON.parse(options.body);
+      applied.push(opacity);
+      return {ok:true,json:async()=>({available:true,opacity})};
+    }
+    return {ok:true,json:async()=>({available:true,opacity:100})};
+  }});
+  await tick();
+  controller.setModal(true);
+  await tick();
+  assert.deepEqual(applied,[60,100]);
+  await controller.setOpacity(75);
+  assert.equal(controller.snapshot().opacity,75);
+  assert.deepEqual(applied,[60,100]);
+  controller.setModal(false);
+  await tick();
+  assert.deepEqual(applied,[60,100,75]);
+  controller.dispose();
+});
+
 test('browser-storage failures keep their concise localized error',()=>{
   const api=appearance(),error='このブラウザーまたはアプリに設定を保存できません。';
   const controller=api.createController({theme:{overrideTokens(){assert.fail('Failed preferences must not override theme.');}},storage:{getItem:()=>null,setItem(){throw Error('Unavailable storage');}},indexedDB:memoryDb(),doc:{body:{style:{setProperty(){},removeProperty(){}},setAttribute(){},removeAttribute(){}}},urlApi:{revokeObjectURL(){}},decode(){}});
