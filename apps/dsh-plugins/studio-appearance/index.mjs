@@ -8,23 +8,19 @@ export const Config={'~standard':{version:1,vendor:'studio-appearance',validate(
   if(typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(k=>k!=='desktopWindowOpacity')||('desktopWindowOpacity'in input&&typeof input.desktopWindowOpacity!=='boolean'))return {issues:[{message:'Invalid appearance configuration.'}]};
   return {value:input};
 }}};
-// The native sticky composer seat paints an opaque fade over the conversation
-// wallpaper. Paint the same viewport-aligned layer on that seat as well: it
-// still masks scrolled transcript content, while the actual input card keeps
-// its native opaque surface and all background styles stay in conversations.
+const wallpaper=`background-color:var(--dsw-alias-bg-base);background-image:linear-gradient(color-mix(in srgb,var(--dsw-alias-bg-base) calc(100% - var(--studio-wallpaper-opacity,18%)),transparent),color-mix(in srgb,var(--dsw-alias-bg-base) calc(100% - var(--studio-wallpaper-opacity,18%)),transparent)),var(--studio-wallpaper-image);background-size:auto,var(--studio-wallpaper-size,cover);background-repeat:no-repeat,var(--studio-wallpaper-repeat,no-repeat);background-position:center,var(--studio-wallpaper-position,center)`;
+// Paint on the chosen ancestor only. Chromium gives the native sticky seat
+// its own compositing layer, so a second image there can have a different crop.
 export const WALLPAPER_STYLE=`
-body[data-studio-wallpaper] [data-conversation-content],
-body[data-studio-wallpaper] [data-conversation-content] [data-composer-seat]{background-color:var(--dsw-alias-bg-base);background-image:linear-gradient(color-mix(in srgb,var(--dsw-alias-bg-base) calc(100% - var(--studio-wallpaper-opacity,18%)),transparent),color-mix(in srgb,var(--dsw-alias-bg-base) calc(100% - var(--studio-wallpaper-opacity,18%)),transparent)),var(--studio-wallpaper-image);background-size:auto,var(--studio-wallpaper-size,cover);background-repeat:no-repeat,var(--studio-wallpaper-repeat,no-repeat);background-position:center,var(--studio-wallpaper-position,center);background-attachment:fixed,fixed}
+body[data-studio-wallpaper][data-studio-wallpaper-scope='conversation'] [data-conversation-content]{${wallpaper}}
+body[data-studio-wallpaper] [data-conversation-content] [data-composer-seat]{background:transparent!important}
 `;
 // opt-in chrome styling uses the version-pinned shell's semantic data hooks,
 // never generated CSS-module names. Keep dialogs, floating panes, popovers,
-// input cards and output images on their original readable surfaces. Reusing
-// the viewport-aligned image on the sticky seat continues to mask transcript
-// content without adding another compositor/blur layer.
+// input cards and output images on their original readable surfaces.
 export const FULL_WINDOW_STYLE=`
 body[data-studio-wallpaper][data-studio-wallpaper-scope='window']{--dsw-specific-sidebar-fill:transparent}
-body[data-studio-wallpaper][data-studio-wallpaper-scope='window'] :has(> [data-shell-bottom]),
-body[data-studio-wallpaper][data-studio-wallpaper-scope='window'] [data-conversation-content] [data-composer-seat]{background-color:var(--dsw-alias-bg-base);background-image:linear-gradient(color-mix(in srgb,var(--dsw-alias-bg-base) calc(100% - var(--studio-wallpaper-opacity,18%)),transparent),color-mix(in srgb,var(--dsw-alias-bg-base) calc(100% - var(--studio-wallpaper-opacity,18%)),transparent)),var(--studio-wallpaper-image);background-size:auto,var(--studio-wallpaper-size,cover);background-repeat:no-repeat,var(--studio-wallpaper-repeat,no-repeat);background-position:center,var(--studio-wallpaper-position,center);background-attachment:fixed,fixed}
+body[data-studio-wallpaper][data-studio-wallpaper-scope='window'] :has(> [data-shell-bottom]){${wallpaper}}
 body[data-studio-wallpaper][data-studio-wallpaper-scope='window'] :has(> [data-shell-bottom]) > div:not([data-shell-overlay]),
 body[data-studio-wallpaper][data-studio-wallpaper-scope='window'] :has(> [data-shell-bottom]) > div:first-child > div,
 body[data-studio-wallpaper][data-studio-wallpaper-scope='window'] [data-phase]:has(> [data-conversation-content]),

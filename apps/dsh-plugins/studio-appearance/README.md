@@ -16,7 +16,8 @@ so compatible plugins follow the same accent.
   launcher slot and is saved separately in each browser or Desktop profile.
 
 The composer, menus, dialogs, floating panes and displayed images retain readable
-surfaces. Wallpaper changes affect the interface, not generated image content.
+surfaces. A single wallpaper spans the selected area, including the space around
+the prompt input.
 
 On Windows Desktop, set `desktopWindowOpacity: true` on this entry in the
 Desktop profile to enable the separate native window control. It applies a

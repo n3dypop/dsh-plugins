@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {apply as applyHostAppearance,Config,inject} from '../apps/dsh-plugins/studio-appearance/index.mjs';
+import {apply as applyHostAppearance,Config,inject,WALLPAPER_STYLE,FULL_WINDOW_STYLE} from '../apps/dsh-plugins/studio-appearance/index.mjs';
 import {readFile} from 'node:fs/promises';
 import {runInNewContext} from 'node:vm';
 
@@ -20,6 +20,19 @@ test('native window setting is explicit and plugin declares the required connect
   assert.ok(validate({desktopWindowOpacity:'true'}).issues);
   assert.ok(validate({desktopWindowOpacity:true,unexpected:true}).issues);
   assert.throws(()=>applyHostAppearance({on(){}},{desktopWindowOpacity:true}),/packaged Windows Desktop Host/);
+});
+
+test('each wallpaper scope paints on one ancestor and the composer seat shows it through',()=>{
+  const rules=css=>[...css.matchAll(/([^{}]+)\{([^{}]+)}/g)].map(([,selector,style])=>({selector:selector.trim(),style}));
+  const conversation=rules(WALLPAPER_STYLE),window=rules(FULL_WINDOW_STYLE);
+  const paints=scope=>scope.filter(rule=>rule.style.includes('var(--studio-wallpaper-image)'));
+  assert.equal(paints(conversation).length,1);
+  assert.match(paints(conversation)[0].selector,/scope='conversation'\] \[data-conversation-content\]$/);
+  assert.equal(paints(window).length,1);
+  assert.match(paints(window)[0].selector,/scope='window'\] :has\(> \[data-shell-bottom\]\)$/);
+  const composer=conversation.find(rule=>rule.selector.endsWith('[data-composer-seat]'));
+  assert.equal(composer.style,'background:transparent!important');
+  assert.doesNotMatch(WALLPAPER_STYLE+FULL_WINDOW_STYLE,/data-composer-card|background-attachment:fixed/);
 });
 
 const source=await readFile(new URL('../apps/dsh-plugins/studio-appearance/client.js',import.meta.url),'utf8');
