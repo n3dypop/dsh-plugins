@@ -6,6 +6,7 @@ window.__ModuleLoader__.load({
     const {Button,IconSettingsOutlineMedium}=require('@deepseek-ai/dsh-client-ui-primitives');
     const KEY='studio-appearance.preferences.v1', WINDOW_KEY='studio-appearance.window-opacity.v1', DB='studio-appearance', STORE='assets', WALLPAPER='wallpaper';
     const MAX_BYTES=20*1024*1024, MAX_PIXELS=40000000;
+    const SETTINGS_LAUNCHER='settings.launcher';
     const defaults=Object.freeze({accentEnabled:false,accent:'#4176e6',opacity:18,wallpaperFit:'cover',wallpaperPosition:'center',wallpaperScope:'conversation',settingsOnly:false});
     const presets=Object.freeze([{name:'ブルー',color:'#4176e6'},{name:'バイオレット',color:'#8057d8'},{name:'ジェイド',color:'#218071'},{name:'コーラル',color:'#c65d41'},{name:'ゴールド',color:'#a77b22'},{name:'スレート',color:'#64748b'}]);
     const copy={
@@ -240,16 +241,15 @@ window.__ModuleLoader__.load({
       ctx.effect(()=>ctx.locale.register('studio.appearance','en',en));
       ctx.effect(()=>ctx.locale.register('studio.appearance','ja',ja));
       ctx.effect(()=>{const sync=event=>{if(event.key===KEY)controller.reloadPreferences();};window.addEventListener('storage',sync);return()=>window.removeEventListener('storage',sync);});
-      const launcherSlot='settings.launcher';
       // The shell owns access, the settings dialog and its keyboard shortcut.
       // A higher-priority occupant is installed only while the option is on.
-      ctx.slots.inject(launcherSlot,()=>{
+      ctx.slots.inject(SETTINGS_LAUNCHER,()=>{
         let unregister;
         function sync(){
           if(controller.snapshot().settingsOnly){
-            unregister??=ctx.slots.register({name:launcherSlot,priority:-10,locale:'studio.appearance'},SettingsLauncher);
-          }else if(unregister){
-            unregister();
+            unregister??=ctx.slots.register({name:SETTINGS_LAUNCHER,priority:-10,locale:'studio.appearance'},SettingsLauncher);
+          }else{
+            unregister?.();
             unregister=undefined;
           }
         }
@@ -257,7 +257,7 @@ window.__ModuleLoader__.load({
         sync();
         return()=>{unsubscribe();unregister?.();};
       });
-      ctx.slots.inject('settings.general.item',()=>ctx.slots.register({name:'settings.general.item',id:'studio-appearance',order:12,locale:'studio.appearance',inject:()=>({controller,windowOpacity,settingsLauncherAvailable:ctx.slots.spec(launcherSlot)?.kind==='single'})},Appearance));
+      ctx.slots.inject('settings.general.item',()=>ctx.slots.register({name:'settings.general.item',id:'studio-appearance',order:12,locale:'studio.appearance',inject:()=>({controller,windowOpacity,settingsLauncherAvailable:ctx.slots.spec(SETTINGS_LAUNCHER)?.kind==='single'})},Appearance));
     }
     return {inject:['slots','theme','locale'],apply,Appearance,SettingsLauncher,normalize,accentOverrides,contrastColor,validateImage,createController,createWindowOpacityController,imageStore,en,ja,localizedText};
   },
