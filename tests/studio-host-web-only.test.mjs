@@ -2,11 +2,25 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {assertWebOnlyHost} from '../apps/dsh-plugins/studio-host/index.mjs';
+import {assertWebOnlyHost,hostHandler} from '../apps/dsh-plugins/studio-host/index.mjs';
 
 test('host restart permits standalone Node and refuses Electron before configuring a route',()=>{
   assert.doesNotThrow(()=>assertWebOnlyHost({node:'24.0.0'}));
   assert.throws(()=>assertWebOnlyHost({node:'24.0.0',electron:'44.0.0'}),/Desktop is unsupported/);
+});
+
+test('restart requires an exact JSON media type and a nonempty receipt ID when supplied', async () => {
+  const origin = 'http://127.0.0.1:3080';
+  let previews = 0;
+  const handler = hostHandler({ origin, manager: { preview: () => ++previews, snapshot: () => 1 } });
+  const post = type => handler(new Request(`${origin}/api/local-studio/host`, {
+    method: 'POST', headers: { origin, 'x-local-studio-host': '1', 'content-type': type },
+    body: JSON.stringify({ action: 'preview', mode: 'normal' }),
+  }));
+  assert.equal((await post('application/jsonp')).status, 403);
+  assert.equal((await post('Application/JSON; charset=utf-8')).status, 200);
+  assert.equal(previews, 1);
+  assert.equal((await handler(new Request(`${origin}/api/local-studio/host?requestId=`))).status, 400);
 });
 
 test('packaged Desktop Electron cannot activate Web-only host lifecycle',{skip:!process.env.MEDIA_STUDIO_DESKTOP_TEST_EXE},()=>{

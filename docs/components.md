@@ -12,8 +12,8 @@ session metadata and operation receipts.
 | `studio-sessions` | Session Library, workspace metadata and deletion reservations. | Actual deletion runs in the offline adapter before managed startup, preserving shared attachments and external assets. It does not restart DSH or manage generation outputs. |
 | `studio-host` | Confirmed normal/force host restart and its worker handoff. | The managed launcher owns startup; optional integration policies protect external work. It does not restart other products. |
 
-`shared/` contains the small runtime-configuration, path and Windows process
-identity utilities used by Host features. It imports no Media Studio backend.
+`shared/` contains runtime configuration, path checks, Windows process identity
+and the same-origin JSON request checks shared by Host features.
 An optional `policyModule` is an explicit trusted installation dependency;
 Media Studio supplies one, but standalone installations can provide their own or
 leave the integration unset. Do not register both a generic and an integration

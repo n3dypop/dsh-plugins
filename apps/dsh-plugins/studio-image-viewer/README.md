@@ -1,9 +1,10 @@
 # Studio Image Viewer
 
-A zoomable viewer for DSH **0.2.1-rc.5** and **0.2.2-rc.1** image slots: sent attachments, tool and
+A zoomable viewer for DSH image slots: sent attachments, tool and
 trajectory images, and galleries connected to the public viewer factory. Images
 retain their aspect ratio and have no added rounded corners, frame or shadow.
-The toolbar follows DSH buttons, icons, theme tokens and font settings.
+The toolbar follows DSH buttons, icons, theme tokens and font settings. See
+[compatibility](../../../docs/compatibility.md) for supported releases.
 
 - Zoom with **+ / −**, the wheel or a two-pointer pinch.
 - Pan by dragging or using arrow keys. Smaller images stay centered.

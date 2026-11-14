@@ -1,3 +1,4 @@
+import {jsonResponse as response,isLocalJsonMutation} from '../shared/web-route.mjs';
 import {pathToFileURL} from 'node:url';
 import {createRuntimeAdapter} from './runtime-adapter.mjs';
 import {createRestartManager} from './restart-manager.mjs';
@@ -16,12 +17,11 @@ export const MAINTENANCE_PATH='/api/local-studio/maintenance-stop';
 // its mutation route there, even if a compatible DSH engine version matches.
 // This also conservatively excludes an Electron-powered Web CLI Host.
 export function assertWebOnlyHost(versions=process.versions){if(versions?.electron)throw new Error('studio-host requires the standalone Node Web Host; Desktop is unsupported.');}
-const response=(status,value)=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 export function hostHandler({manager,origin,schedule=fn=>setTimeout(fn,250)}){return async request=>{try{
   const url=new URL(request.url);
-  if(request.method==='GET'){if([...url.searchParams.keys()].some(k=>k!=='requestId')||url.searchParams.getAll('requestId').length>1)return response(400,{error:'要求が不正です。'});const id=url.searchParams.get('requestId');if(id&&!UUID.test(id))return response(400,{error:'操作IDが不正です。'});return response(200,await manager.snapshot(id??undefined));}
+  if(request.method==='GET'){if([...url.searchParams.keys()].some(k=>k!=='requestId')||url.searchParams.getAll('requestId').length>1)return response(400,{error:'要求が不正です。'});const id=url.searchParams.get('requestId');if(id!==null&&!UUID.test(id))return response(400,{error:'操作IDが不正です。'});return response(200,await manager.snapshot(id??undefined));}
   if(request.method!=='POST')return response(405,{error:'未対応の操作です。'});
-  if(url.search||request.headers.get('origin')!==origin||request.headers.get('x-local-studio-host')!=='1'||!(request.headers.get('content-type')??'').startsWith('application/json')||request.headers.get('sec-fetch-site')==='cross-site')return response(403,{error:'DSH設定画面からの本人操作を確認できません。'});
+  if(url.search||!isLocalJsonMutation(request,origin,'x-local-studio-host'))return response(403,{error:'DSH設定画面からの本人操作を確認できません。'});
   const input=await request.json(),context={cookie:request.headers.get('cookie')};if(!input||Array.isArray(input)||Object.keys(input).some(k=>!['action','requestId','previewId','mode'].includes(k)))return response(400,{error:'要求が不正です。'});
   const mode=restartMode(input.mode);
   if(input.action==='preview')return response(200,await manager.preview(context,{mode}));if(input.action!=='restart')return response(400,{error:'未対応の操作です。'});

@@ -2,7 +2,7 @@
 // register itself. Registration requires a product manager whose owner,
 // ledger and JSONL evidence have all been verified; none is client-provided.
 import {UUID} from './restart-state.mjs';
-const reply=(status,value)=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+import {jsonResponse as reply,isLocalJsonMutation} from '../shared/web-route.mjs';
 export function maintenanceStopHandler({manager,origin,schedule=fn=>setTimeout(fn,250),onExitFailure=()=>{}}){
  if(!manager||typeof manager.prepare!=='function'||typeof manager.status!=='function'||typeof origin!=='string'||!/^http:\/\/127\.0\.0\.1:\d+$/.test(origin))throw TypeError('Maintenance route dependencies are incomplete');
  return async request=>{
@@ -16,7 +16,7 @@ export function maintenanceStopHandler({manager,origin,schedule=fn=>setTimeout(f
     return reply(200,await manager.status(url.searchParams.get('requestId')));
    }
    if(request.method!=='POST')return reply(405,{error:'未対応の操作です。'});
-   if(url.search||!(request.headers.get('content-type')??'').toLowerCase().startsWith('application/json'))return reply(400,{error:'要求が不正です。'});
+   if(url.search||!isLocalJsonMutation(request,origin,'x-local-studio-host'))return reply(400,{error:'要求が不正です。'});
    const input=await request.json();if(!input||Array.isArray(input)||Object.keys(input).sort().join(',')!=='requestId'||!UUID.test(input.requestId??''))return reply(400,{error:'要求が不正です。'});
    const prepared=await manager.prepare(input.requestId,{cookie:request.headers.get('cookie')});
    try{schedule(()=>void prepared.requestExit().catch(error=>{try{onExitFailure(error);}catch{}}));}catch(error){prepared.release();throw error;}

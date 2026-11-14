@@ -1,3 +1,4 @@
+import {jsonResponse as response,isLocalJsonMutation} from '../shared/web-route.mjs';
 import {readFile,open,unlink,mkdir} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 import {join} from 'node:path';
@@ -58,5 +59,4 @@ export function createWorkspaceVisuals({root,list,now=()=>new Date().toISOString
   }
   return {snapshot,mutate:input=>{const current=tail.then(()=>mutate(input));tail=current.catch(()=>{});return current;}};
 }
-const response=(status,value)=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
-export function workspaceVisualsHandler({store,origin}){return async request=>{try{const url=new URL(request.url);if(url.search)return response(400,{error:'要求が不正です。'});if(request.method==='GET')return response(200,await store.snapshot());if(request.method!=='POST')return response(405,{error:'未対応の操作です。'});if(request.headers.get('origin')!==origin||request.headers.get('x-local-studio-workspaces')!=='1'||!(request.headers.get('content-type')??'').startsWith('application/json')||request.headers.get('sec-fetch-site')==='cross-site')return response(403,{error:'DSH画面からの本人操作を確認できません。'});return response(200,await store.mutate(await request.json()));}catch(error){return response(error.status??503,{error:error.status?error.message:'外観の保存結果を確認できません。再読込してください。'});}};}
+export function workspaceVisualsHandler({store,origin}){return async request=>{try{const url=new URL(request.url);if(url.search)return response(400,{error:'要求が不正です。'});if(request.method==='GET')return response(200,await store.snapshot());if(request.method!=='POST')return response(405,{error:'未対応の操作です。'});if(!isLocalJsonMutation(request,origin,'x-local-studio-workspaces'))return response(403,{error:'DSH画面からの本人操作を確認できません。'});return response(200,await store.mutate(await request.json()));}catch(error){return response(error.status??503,{error:error.status?error.message:'外観の保存結果を確認できません。再読込してください。'});}};}

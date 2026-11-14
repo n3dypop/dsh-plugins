@@ -1,6 +1,6 @@
 # DSH Host Control
 
-Independent Windows Web-host plugin for DSH **0.2.1-rc.5** and **0.2.2-rc.1**, using public lifecycle, Agent, persistence, locale and settings APIs. **Settings → General → DSH** offers normal and force restart. It requires a managed DSH launcher; it cannot safely restart an arbitrary process discovered by port alone. The packaged Desktop host is not supported: keep this entry disabled there. The plugin refuses to activate in Electron processes, including Electron-powered Web CLI instances; use the standalone Node Web Host.
+Windows plugin for the managed standalone Node Web Host. **Settings → General → DSH** offers normal and force restart. The launcher and process identity must match the installation records. Keep this entry disabled in Desktop and Electron-powered Web. See [compatibility](../../../docs/compatibility.md) for supported releases.
 
 Normal restart refuses active conversations and queued input. Force restart requires a separate confirmation showing affected conversations and queued messages. It cancels only confirmed input IDs and interrupts the corresponding DSH responses. Saved history remains; unfinished data may be lost if shutdown needs process termination. Inputs arriving after confirmation are preserved and stop the restart.
 

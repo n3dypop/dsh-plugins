@@ -1,3 +1,4 @@
+import {jsonResponse as response,isLocalJsonMutation} from '../shared/web-route.mjs';
 import {readFile,mkdir} from 'node:fs/promises';
 import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -16,7 +17,6 @@ export function assertWebSessionHost(versions=process.versions){
   if(versions?.electron)throw new Error('Session Library is available only in the managed Web Host.');
 }
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
-const response=(status,value)=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const refuse=(message,status=409)=>{throw Object.assign(Error(message),{status});};
 export function createLibrary({root,list,live,now=()=>Date.now(),uuidFactory=randomUUID}){
   const previews=new Map();let tail=Promise.resolve();
@@ -47,7 +47,7 @@ export function createLibrary({root,list,live,now=()=>Date.now(),uuidFactory=ran
     try{if(input?.action==='preview')return await prepare(input);if(input?.action==='schedule')return await schedule(input);if(input?.action==='cancel')return await cancel(input);refuse('未対応のセッション操作です。',400);}finally{await release();}
   })};
 }
-export function libraryHandler({library,origin}){return async request=>{try{const url=new URL(request.url);if(url.search)return response(400,{error:'要求が不正です。'});if(request.method==='GET')return response(200,await library.snapshot());if(request.method!=='POST')return response(405,{error:'未対応の操作です。'});if(request.headers.get('origin')!==origin||request.headers.get('x-local-studio-sessions')!=='1'||!(request.headers.get('content-type')??'').startsWith('application/json')||request.headers.get('sec-fetch-site')==='cross-site')return response(403,{error:'DSH画面からの本人操作を確認できません。'});return response(200,await library.mutate(await request.json()));}catch(e){return response(e.status??503,{error:e.status?e.message:'セッション操作の結果を確認できません。状態を再読込してください。'});}};}
+export function libraryHandler({library,origin}){return async request=>{try{const url=new URL(request.url);if(url.search)return response(400,{error:'要求が不正です。'});if(request.method==='GET')return response(200,await library.snapshot());if(request.method!=='POST')return response(405,{error:'未対応の操作です。'});if(!isLocalJsonMutation(request,origin,'x-local-studio-sessions'))return response(403,{error:'DSH画面からの本人操作を確認できません。'});return response(200,await library.mutate(await request.json()));}catch(e){return response(e.status??503,{error:e.status?e.message:'セッション操作の結果を確認できません。状態を再読込してください。'});}};}
 export async function apply(ctx,config){
   assertWebSessionHost();
   const root=runtimeRootOf(config),settings=JSON.parse(await readFile(join(root,'config/environment.json'),'utf8'));

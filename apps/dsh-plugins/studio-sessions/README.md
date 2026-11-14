@@ -1,6 +1,6 @@
 # Session Library
 
-Conversation organization and workspace appearance for the standalone DSH Web Host **0.2.1-rc.5** and **0.2.2-rc.1**. Desktop is not supported.
+Conversation organization and workspace appearance for the managed standalone Web Host. See [compatibility](../../../docs/compatibility.md) for supported releases and the Desktop boundary.
 Open **Settings → Session Library** to filter by title/ID, workspace,
 Uncategorized, archive state, date or empty conversations.
 
