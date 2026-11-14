@@ -2,8 +2,6 @@ import {createHmac,randomBytes,timingSafeEqual} from 'node:crypto';
 import {resolve,join} from 'node:path';
 import {assertLocalDesktopHome,desktopSessionPaths,noLinks} from './session-store.mjs';
 
-export const desktopProofPath='/api/local-studio/desktop-proof/sessions';
-
 export async function resolveDesktopSessions(ctx){
   const profile=ctx.get('profileContext');
   const backend=ctx.sessionPersistence;
@@ -24,7 +22,7 @@ export async function resolveDesktopSessions(ctx){
 // Register this challenge and its POST only on DSH's authenticated owner
 // connection. The Desktop protocol forwarder removes Origin and supplies the
 // owner cookie. Require a cookie-bound proof to accept that originless POST.
-export function desktopSessionTrust(hostOrigin,{now=Date.now}={}){
+export function desktopSessionTrust(hostOrigin,{path,marker,now=Date.now}){
   const key=randomBytes(32);
   function context(request){
     const ownOrigin=hostOrigin(), origin=request.headers.get('origin'), site=request.headers.get('sec-fetch-site');
@@ -34,7 +32,7 @@ export function desktopSessionTrust(hostOrigin,{now=Date.now}={}){
     return {cookie,ownOrigin};
   }
   function sign({ownOrigin,cookie},issued){
-    return createHmac('sha256',key).update(JSON.stringify(['POST','/api/local-studio/sessions',ownOrigin,cookie,issued])).digest('base64url');
+    return createHmac('sha256',key).update(JSON.stringify(['POST',path,ownOrigin,cookie,issued])).digest('base64url');
   }
   return {
     issue(request){
@@ -44,7 +42,7 @@ export function desktopSessionTrust(hostOrigin,{now=Date.now}={}){
       return `${issued}.${sign(owner,issued)}`;
     },
     allows(request){
-      if(request.method!=='POST'||request.headers.get('x-local-studio-sessions')!=='1'||
+      if(request.method!=='POST'||new URL(request.url).pathname!==path||request.headers.get(marker)!=='1'||
         request.headers.get('content-type')?.split(';',1)[0].trim().toLowerCase()!=='application/json')return false;
       const owner=context(request),proof=request.headers.get('x-local-studio-desktop-proof');
       const match=proof?.length<=64&&/^(\d{1,16})\.([A-Za-z0-9_-]{43})$/.exec(proof);

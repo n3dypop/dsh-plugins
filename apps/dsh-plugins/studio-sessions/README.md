@@ -1,7 +1,7 @@
 # Session Library
 
-Conversation deletion for managed Web and Windows Desktop, with workspace
-appearance controls on Web. See [compatibility](../../../docs/compatibility.md).
+Conversation deletion and workspace appearance for managed Web and Windows
+Desktop. See [compatibility](../../../docs/compatibility.md).
 Open **Settings → Session Library** to filter by title/ID, workspace,
 Uncategorized, archive state, date or empty conversations.
 
@@ -37,12 +37,14 @@ The **Workspaces** section offers eight fixed icons, preset/custom hex colors,
 and native defaults, including separate Uncategorized appearance. **Save
 appearance** updates Session Library and the supported native sidebar;
 **Restore defaults** restores native presentation. Preferences are Host-persisted
-and shared between browsers; other clients refresh on focus, reconnect or reload.
+and shared between clients of the same Host. Web and Desktop keep their own
+settings. Clients refresh on focus, reconnect or reload.
 
 Saves change only the owned visual field and preserve unrelated metadata.
 Workspace paths/titles and deletion reservations are separate operations.
 Uncertain saves are reconciled by receipt instead of automatically resubmitted.
-Both operations share the managed lifecycle lock with restart protection.
+Appearance and deletion reservations share an operation lock. Web also uses it
+for managed restart protection.
 
 The sidebar adapter uses narrow semantic workspace-row hooks because the target
 DSH version exposes no workspace-icon rendering slot. Revalidate folder icons,

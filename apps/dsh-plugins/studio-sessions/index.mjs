@@ -5,7 +5,7 @@ import {randomUUID} from 'node:crypto';
 import {createRuntimeConfig,runtimeRootOf} from '../shared/plugin-config.mjs';
 import {digest,readQueue,writeQueue,describeDeletion,blockers,identity,noLinks,sessionPaths} from './session-store.mjs';
 import {createWorkspaceVisuals,workspaceVisualsHandler,WORKSPACE_PATH,acquireWorkspaceLock} from './workspace-visuals.mjs';
-import {desktopProofPath,desktopSessionTrust,resolveDesktopSessions} from './desktop.mjs';
+import {desktopSessionTrust,resolveDesktopSessions} from './desktop.mjs';
 
 export const name='studio-sessions',inject=['connection','sessionPersistence','sessions','agents','workspaceRegistry','webServer'];
 const webConfig=createRuntimeConfig()['~standard'];
@@ -54,27 +54,28 @@ export async function apply(ctx,config){
   const desktop=config?.platform==='desktop';
   if(!desktop)assertWebSessionHost();
   const root=desktop?await resolveDesktopSessions(ctx):runtimeRootOf(config);
-  let origin,mutationAllowed;
-  if(desktop){
-    const trust=desktopSessionTrust(()=>{
-      const server=ctx.webServer;
-      if(server.host==='127.0.0.1'&&server.protocol==='http:'&&Number.isInteger(server.port)&&server.port>0&&
-        server.getOrigin()===`http://127.0.0.1:${server.port}`)return server.getOrigin();
-      return null;
-    });
-    mutationAllowed=trust.allows;
-    ctx.effect(()=>ctx.connection.fetch.register({path:desktopProofPath,methods:['GET'],requestBody:'buffered',fetch:request=>{
+  let origin;
+  const hostOrigin=()=>{
+    const server=ctx.webServer;
+    if(server.host==='127.0.0.1'&&server.protocol==='http:'&&Number.isInteger(server.port)&&server.port>0&&
+      server.getOrigin()===`http://127.0.0.1:${server.port}`)return server.getOrigin();
+    return null;
+  };
+  function register(path,kind,marker,handler){
+    const trust=desktop?desktopSessionTrust(hostOrigin,{path,marker}):null;
+    if(trust)ctx.effect(()=>ctx.connection.fetch.register({path:`/api/local-studio/desktop-proof/${kind}`,methods:['GET'],requestBody:'buffered',fetch:request=>{
       const proof=trust.issue(request);
       return proof?response(200,{proof}):response(403,{error:'Desktopの操作権限を確認できません。'});
     }}));
-  }else{
+    ctx.effect(()=>ctx.connection.fetch.register({path,methods:['GET','POST'],requestBody:'buffered',fetch:handler({origin,mutationAllowed:trust?.allows})}));
+  }
+  if(!desktop){
     const settings=JSON.parse(await readFile(join(root,'config/environment.json'),'utf8'));
     if(settings.dshHome!=='data/dsh'||!Number.isInteger(settings.dshPort))throw Error('Session Library requires the verified runtime session layout');
     origin=`http://127.0.0.1:${settings.dshPort}`;
   }
   const library=createLibrary({root,desktop,list:()=>ctx.sessionPersistence.list(),live:id=>{const agent=ctx.agents.get(id),session=ctx.sessions.get(id);return {running:agent?.status==='running',pending:Boolean(agent?.inbox?.hasPending),seq:session?.seq??null};}});
-  ctx.effect(()=>ctx.connection.fetch.register({path:PATH,methods:['GET','POST'],requestBody:'buffered',fetch:libraryHandler({library,origin,mutationAllowed})}));
-  if(desktop)return;
+  register(PATH,'sessions','x-local-studio-sessions',options=>libraryHandler({library,...options}));
   const visuals=createWorkspaceVisuals({root,list:()=>ctx.workspaceRegistry.list()});
-  ctx.effect(()=>ctx.connection.fetch.register({path:WORKSPACE_PATH,methods:['GET','POST'],requestBody:'buffered',fetch:workspaceVisualsHandler({store:visuals,origin})}));
+  register(WORKSPACE_PATH,'workspace-visuals','x-local-studio-workspaces',options=>workspaceVisualsHandler({store:visuals,...options}));
 }

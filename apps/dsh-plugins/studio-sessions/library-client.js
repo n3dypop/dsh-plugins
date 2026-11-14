@@ -18,18 +18,22 @@ window.__ModuleLoader__.load({id:'studio-sessions',factory(require){
     return (sessions.ids??[]).map(id=>{const row=sessions.byId[id],values=row.projections?.values??row.projectionValues??sessions.projectionsBySession?.[id]?.values??{},meta=metadata.get(id);return {...row,sessionId:id,title:row.title??(typeof values.title==='string'?values.title:row.displayTitle??id),workspaceId:assigned.get(id)??null,archived:archived.has(id),meta};}).filter(row=>{if(scope==='uncategorized'&&(row.workspaceId||row.archived))return false;if(scope==='archived'&&!row.archived)return false;if(scope.startsWith('workspace:')&&row.workspaceId!==scope.slice(10))return false;if(blank&&!row.blank)return false;if(needle&&!`${row.title}\n${row.sessionId}`.toLowerCase().includes(needle))return false;if(before&&row.updatedAt>=new Date(before+'T00:00:00').getTime()+86400000)return false;return true;});
   }
   const reason=row=>row.running||row.meta?.busy?'busy':row.meta?.pending?'queued':row.origin==='subagent'||row.meta?.origin==='subagent'?'internal':row.meta?.dependencies?.length?'dependent':!row.meta?'unavailable':null;
-  async function request(body,signal){
+  async function requestOptions(body,signal,{marker,proofKind,fetcher=fetch}){
     const options={credentials:'same-origin',cache:'no-store',signal};
-    const headers=body?{'Content-Type':'application/json','X-Local-Studio-Sessions':'1'}:{};
+    const headers=body?{'Content-Type':'application/json',[marker]:'1'}:{};
     if(body&&isDesktop()){
       try{
-        const proofResponse=await fetch('/api/local-studio/desktop-proof/sessions',{...options,headers:{'X-Local-Studio-Proof-Request':'1'}});
+        const proofResponse=await fetcher('/api/local-studio/desktop-proof/'+proofKind,{...options,headers:{'X-Local-Studio-Proof-Request':'1'}});
         const value=await proofResponse.json();
         if(!proofResponse.ok||typeof value?.proof!=='string')throw Error('Desktop proof unavailable');
         headers['X-Local-Studio-Desktop-Proof']=value.proof;
       }catch{throw Object.assign(Error('Desktopの操作権限を確認できません。'),{definite:true});}
     }
-    const response=await fetch(PATH,{...options,method:body?'POST':'GET',headers,...(body?{body:JSON.stringify(body)}:{})});
+    return {...options,method:body?'POST':'GET',headers,...(body?{body:JSON.stringify(body)}:{})};
+  }
+  async function request(body,signal){
+    const options=await requestOptions(body,signal,{marker:'X-Local-Studio-Sessions',proofKind:'sessions'});
+    const response=await fetch(PATH,options);
     let value;try{value=await response.json();}catch{throw Error('セッション管理の応答を確認できません。');}if(!response.ok)throw Object.assign(Error(value.error??'セッション操作に失敗しました。'),{definite:response.status>=400&&response.status<500});return value;
   }
   function Library({sessions,workspaces,workspaceController,renderSlot,t=text}){
@@ -45,7 +49,7 @@ window.__ModuleLoader__.load({id:'studio-sessions',factory(require){
     async function act(body){if(lock.current)return;lock.current=true;setBusy(true);setError('');setMessage('');try{const value=await request(body,AbortSignal.timeout(30000));if(!alive.current)return;if(body.action==='preview')setPreview({...value,titles:selectedRows.map(r=>({id:r.sessionId,title:r.title}))});else{saveIntent(null);setUncertain(false);setPreview(null);setSelected([]);setMessage(t(body.action==='cancel'?'cancelledMessage':'scheduledMessage'));await refresh();}}catch(e){if(!alive.current)return;setError(e.message);if(body.action==='schedule'&&!e.definite)setUncertain(true);else if(body.action==='schedule')saveIntent(null);}finally{lock.current=false;if(alive.current)setBusy(false);}}
     const reserve=()=>{const body={action:'schedule',previewId:preview.previewId,requestId:window.crypto.randomUUID()};saveIntent(body);void act(body);};
     return h('section',{className:'studio-sessions','data-studio-sessions':true,'aria-label':'Session Library'},h('style',null,css+workspaceCss),h('header',{className:'sl-head'},h('h2',null,t('title')),h(Button,{type:'button',variant:'outline',size:'sm',disabled:busy,onClick:()=>void(section==='sessions'?refresh():workspaceController.refresh())},t('refresh'))),
-      desktop?null:h('nav',{className:'sl-tabs','aria-label':'Session Library sections'},...['sessions','workspaces'].map(id=>h(Button,{key:id,type:'button',variant:section===id?'outline':'ghost',size:'sm','data-library-section':id,'aria-pressed':section===id,onClick:()=>setSection(id)},t(id)))),
+      h('nav',{className:'sl-tabs','aria-label':'Session Library sections'},...['sessions','workspaces'].map(id=>h(Button,{key:id,type:'button',variant:section===id?'outline':'ghost',size:'sm','data-library-section':id,'aria-pressed':section===id,onClick:()=>setSection(id)},t(id)))),
       section==='workspaces'?h(WorkspacePanel,{controller:workspaceController,t,renderSlot}):null,
       h('div',{hidden:section!=='sessions','data-library-sessions':true},h('p',{className:'sl-muted'},t(desktop?'desktopNotice':'notice')),h('p',{className:'sl-muted'},t('preserved')),
       h('div',{className:'sl-filters'},h('label',null,t('search'),h('input',{type:'search',value:filters.query,onChange:e=>change('query',e.target.value),'aria-label':t('search')})),h('label',null,t('scope'),h('select',{value:filters.scope,onChange:e=>change('scope',e.target.value),'aria-label':t('scope')},h('option',{value:'all'},t('all')),h('option',{value:'uncategorized'},t('uncategorized')),h('option',{value:'archived'},t('archived')),...groups.items.map(w=>h('option',{key:w.workspaceId,value:'workspace:'+w.workspaceId},w.title)))),h('label',null,t('before'),h('input',{type:'date',value:filters.before,onChange:e=>change('before',e.target.value)})),h('label',{className:'sl-check'},h('input',{type:'checkbox',checked:filters.blank,onChange:e=>change('blank',e.target.checked)}),t('blank'))),
@@ -57,6 +61,6 @@ window.__ModuleLoader__.load({id:'studio-sessions',factory(require){
       library?.requests?.length?h('section',{className:'sl-receipt-list','aria-label':'Deletion reservations'},h('h3',null,t('reservation')),...library.requests.slice().reverse().map(r=>h('details',{key:r.id,className:'sl-receipt',open:r.state==='pending'},h('summary',null,`${status(r.state)} · ${r.count} · ${new Date(r.requestedAt).toLocaleString()}`),h('ul',{className:'sl-muted'},...r.results.map(s=>h('li',{key:s.sessionId},s.sessionId,s.error?h('span',null,' · '+s.error):null))),r.state==='pending'?h(Button,{type:'button',variant:'outline',size:'sm',disabled:busy||uncertain,onClick:()=>void act({action:'cancel',requestId:r.id})},t('cancel')):null))):null),
       typeof renderSlot==='function'?renderSlot('studio.sessions.sections',{activeSection:section}):null);
   }
-  function apply(ctx){const workspaceController=isDesktop()?null:createWorkspaceController();if(workspaceController){ctx.effect(()=>()=>workspaceController.dispose());installWorkspacePresentation(ctx,workspaceController);}ctx.effect(()=>ctx.locale.register('studio.sessions',{en,ja}));ctx.slots.inject('settings.section',()=>ctx.slots.register({name:'settings.section',id:'studio-sessions',order:35,label:()=>ctx.locale.bind('studio.sessions')('title'),locale:'studio.sessions',children:{'studio.sessions.workspace.fields':{kind:'list',scope:'root'},'studio.sessions.sections':{kind:'list',scope:'root'}},inject:()=>({sessions:ctx.sessions,workspaces:ctx.workspaces,workspaceController})},Library));}
+  function apply(ctx){const workspaceController=createWorkspaceController();ctx.effect(()=>()=>workspaceController.dispose());installWorkspacePresentation(ctx,workspaceController);ctx.effect(()=>ctx.locale.register('studio.sessions',{en,ja}));ctx.slots.inject('settings.section',()=>ctx.slots.register({name:'settings.section',id:'studio-sessions',order:35,label:()=>ctx.locale.bind('studio.sessions')('title'),locale:'studio.sessions',children:{'studio.sessions.workspace.fields':{kind:'list',scope:'root'},'studio.sessions.sections':{kind:'list',scope:'root'}},inject:()=>({sessions:ctx.sessions,workspaces:ctx.workspaces,workspaceController})},Library));}
   return {inject:['slots','locale','sessions','workspaces'],apply,Library,rowsFor,reason,request,en,ja,createWorkspaceController,workspaceStyleText,workspaceIconUrl,WorkspaceGlyph,WorkspacePanel,workspaceCatalog,installWorkspacePresentation};
 }});

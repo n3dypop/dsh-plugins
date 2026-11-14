@@ -1,8 +1,8 @@
 import {jsonResponse as response,isLocalJsonMutation} from '../shared/web-route.mjs';
 import {readFile,open,unlink,mkdir} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
-import {join} from 'node:path';
-import {digest,noLinks,atomicJson} from './session-store.mjs';
+import {dirname,join} from 'node:path';
+import {digest,noLinks,atomicJson,sessionPaths} from './session-store.mjs';
 import {UNCATEGORIZED_ID,validateVisual} from './workspace-catalog.mjs';
 
 export const WORKSPACE_PATH='/api/local-studio/workspace-visuals';
@@ -27,8 +27,9 @@ export function validateDocument(value){
   for(const operation of value.operations)if(!object(operation)||!uuid.test(operation.requestId)||!revision.test(operation.signature)||!['save','reset'].includes(operation.action)||typeof operation.workspaceId!=='string')throw Error('Invalid workspace appearance receipt');
   return value;
 }
-export function createWorkspaceVisuals({root,list,now=()=>new Date().toISOString()}){
-  const path=join(root,'data/session-library/workspace-visuals.json'),lockPath=join(root,'data/session-library/workspace-visuals.lock');let tail=Promise.resolve();
+export function createWorkspaceVisuals({root:location,list,now=()=>new Date().toISOString()}){
+  const {root,queue,mutationLock:maintenancePath}=sessionPaths(location),stateDirectory=dirname(queue);
+  const path=join(stateDirectory,'workspace-visuals.json'),lockPath=join(stateDirectory,'workspace-visuals.lock');let tail=Promise.resolve();
   async function read(){await noLinks(root,path,{missing:true});try{const text=await readFile(path,'utf8');if(Buffer.byteLength(text)>8*1024*1024)throw Error('Workspace appearance store is too large');return validateDocument(JSON.parse(text));}catch(e){if(e.code==='ENOENT')return defaults();throw e;}}
   async function targets(){const native=await list();if(!Array.isArray(native))throw Error('Workspace registry unavailable');return [{workspaceId:UNCATEGORIZED_ID,identity:digest({type:'uncategorized'}),uncategorized:true},...native.map(workspace=>{if(typeof workspace.id!=='string'||!/^[A-Za-z0-9_-]{1,220}$/.test(workspace.id)||typeof workspace.path!=='string'||typeof workspace.createdAt!=='string')throw Error('Unsupported workspace identity');return {workspaceId:workspace.id,title:workspace.title,identity:digest({id:workspace.id,path:workspace.path,createdAt:workspace.createdAt})};})];}
   function result(document,items){const styles={};for(const target of items){const record=document.workspaces[target.workspaceId];styles[target.workspaceId]=record?.visual?validateVisual(record.visual):{icon:null,color:null};}return {schemaVersion:1,revision:digest(document),targets:items,styles,operations:document.operations.map(({requestId,workspaceId,action,completedAt})=>({requestId,workspaceId,action,completedAt}))};}
@@ -39,8 +40,8 @@ export function createWorkspaceVisuals({root,list,now=()=>new Date().toISOString
     if(input.action==='reset'&&Object.hasOwn(input,'visual'))throw fault('リセットの指定が不正です。',400);
     // Verify the stored schema before taking the cross-process admission lock.
     await read();await noLinks(root,lockPath,{missing:true});
-    const maintenancePath=join(root,'runtime/Studio-services.lock');await noLinks(root,maintenancePath,{missing:true});
-    await mkdir(join(root,'data/session-library'),{recursive:true});await mkdir(join(root,'runtime'),{recursive:true});let releaseMaintenance,releaseVisual;
+    await noLinks(root,maintenancePath,{missing:true});
+    await mkdir(stateDirectory,{recursive:true});await mkdir(dirname(maintenancePath),{recursive:true});let releaseMaintenance,releaseVisual;
     try{releaseMaintenance=await acquireWorkspaceLock(maintenancePath,{service:'Workspace appearance',pid:process.pid,nonce:randomUUID(),startedAt:now()});}
     catch{throw fault('サービス操作または再起動の準備中です。完了後に外観を保存してください。');}
     try{
@@ -59,4 +60,4 @@ export function createWorkspaceVisuals({root,list,now=()=>new Date().toISOString
   }
   return {snapshot,mutate:input=>{const current=tail.then(()=>mutate(input));tail=current.catch(()=>{});return current;}};
 }
-export function workspaceVisualsHandler({store,origin}){return async request=>{try{const url=new URL(request.url);if(url.search)return response(400,{error:'要求が不正です。'});if(request.method==='GET')return response(200,await store.snapshot());if(request.method!=='POST')return response(405,{error:'未対応の操作です。'});if(!isLocalJsonMutation(request,origin,'x-local-studio-workspaces'))return response(403,{error:'DSH画面からの本人操作を確認できません。'});return response(200,await store.mutate(await request.json()));}catch(error){return response(error.status??503,{error:error.status?error.message:'外観の保存結果を確認できません。再読込してください。'});}};}
+export function workspaceVisualsHandler({store,origin,mutationAllowed=request=>isLocalJsonMutation(request,origin,'x-local-studio-workspaces')}){return async request=>{try{const url=new URL(request.url);if(url.search)return response(400,{error:'要求が不正です。'});if(request.method==='GET')return response(200,await store.snapshot());if(request.method!=='POST')return response(405,{error:'未対応の操作です。'});if(!mutationAllowed(request))return response(403,{error:'DSH画面からの本人操作を確認できません。'});return response(200,await store.mutate(await request.json()));}catch(error){return response(error.status??503,{error:error.status?error.message:'外観の保存結果を確認できません。再読込してください。'});}};}
