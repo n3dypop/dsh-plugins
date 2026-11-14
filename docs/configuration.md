@@ -40,7 +40,7 @@ layout. This is a minimal adapter fragment, not a complete DSH configuration:
 Replace the package-root placeholder with the installation from which Node can
 resolve `@deepseek-ai/dsh/package.json` and the supported persistence/native
 write-lease dependencies. The offline adapter explicitly checks DSH
-`0.2.1-rc.5` or the hash-reviewed npm build of `0.2.2-rc.1`. A source clone or
+`0.2.1-rc.5` or the hash-reviewed builds of `0.2.2-rc.1` and `0.2.2-rc.3`. A source clone or
 an arbitrary newer executable alone is not sufficient.
 Before starting DSH, the managed launcher runs:
 
@@ -52,6 +52,14 @@ The adapter requires the managed DSH process to be stopped and its port free.
 It exits without deletion if there are no pending reservations. A launcher must
 stop when the adapter fails instead of starting DSH against a partially applied
 deletion. Never run this step while another process uses the same session store.
+
+For managed Windows Desktop 0.2.2-rc.3, enable the same entry on the Desktop
+profile with `config: { platform: desktop }`. The plugin checks the native
+session backend and takes the home from that profile. The managed Desktop
+launcher passes the same home to `Apply-SessionDeletions.mjs --desktop-home`
+using the installed Electron executable in Node mode, then starts the app.
+Quit from the tray before using the managed launcher. The Web queue stays in
+the Web runtime and Desktop reservations stay under its own DSH home.
 
 The host configuration requires `launcher.executable`, an array of `launcher.args`
 and absolute `launcher.cwd`. Set `nodeExecutable` when the managed DSH executable

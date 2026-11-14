@@ -1,10 +1,12 @@
 import {readFile,open,unlink,lstat,realpath} from 'node:fs/promises';
-import {join,resolve,relative,isAbsolute,sep} from 'node:path';
+import {join,resolve,relative,isAbsolute,sep,basename,dirname,win32} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createRequire} from 'node:module';
 import {createHash} from 'node:crypto';
 import {createConnection} from 'node:net';
-import {readQueue,writeQueue,sessionPaths,noLinks,contained,digest,identity,blockers,fingerprintDirectory,removeArtifacts,cleanDerivedState,validateDerivedState} from '../../apps/dsh-plugins/studio-sessions/session-store.mjs';
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
+import {readQueue,writeQueue,sessionPaths,desktopSessionPaths,assertLocalDesktopHome,noLinks,contained,digest,identity,blockers,fingerprintDirectory,removeArtifacts,cleanDerivedState,validateDerivedState} from '../../apps/dsh-plugins/studio-sessions/session-store.mjs';
 import {openBackend,acquireLease} from '../../apps/dsh-plugins/studio-sessions/offline-backend.mjs';
 
 export async function assertDshStopped(root,settings){
@@ -49,45 +51,95 @@ export async function assertReviewedRuntime(dshDirectory){
   return pkg.version;
 }
 /** All irreversible work runs before the Host, its writers and derived caches exist. */
-export async function applyDeletions({root,settings,stopped=assertDshStopped,backendFactory=openBackend,leaseFactory=acquireLease}){
-  const queue=await readQueue(root),pending=queue.requests.filter(q=>['pending','applying'].includes(q.state));if(!pending.length)return {deleted:0,blocked:0,requests:0};
-  await stopped(root,settings);if(settings.dshHome!=='data/dsh')throw Error('Unsupported DSH home layout');
-  const lockPath=join(root,'data/session-library/apply.lock');await noLinks(root,lockPath,{missing:true});let lock;
+export async function applyDeletions({root,settings,paths=sessionPaths(root),stopped=assertDshStopped,backendFactory=openBackend,leaseFactory=acquireLease}){
+  if(typeof root!=='string')await stopped();
+  const queue=await readQueue(paths),pending=queue.requests.filter(q=>['pending','applying'].includes(q.state));if(!pending.length)return {deleted:0,blocked:0,requests:0};
+  if(typeof root==='string'){
+    await stopped(root,settings);
+    if(settings.dshHome!=='data/dsh')throw Error('Unsupported DSH home layout');
+  }
+  const lockPath=paths.applyLock;await noLinks(paths.root,lockPath,{missing:true});let lock;
   try{try{lock=await open(lockPath,'wx',0o600);}catch(e){if(e.code!=='EEXIST')throw e;const previous=await lstat(lockPath),record=JSON.parse(await readFile(lockPath,'utf8'));if(!Number.isInteger(record.pid))throw e;try{process.kill(record.pid,0);throw e;}catch(check){if(check.code!=='ESRCH')throw check;}const observed=await lstat(lockPath);if(previous.ino!==observed.ino||previous.mtimeMs!==observed.mtimeMs||previous.size!==observed.size)throw e;await unlink(lockPath);lock=await open(lockPath,'wx',0o600);}await lock.writeFile(JSON.stringify({pid:process.pid,createdAt:new Date().toISOString()}));await lock.sync();}catch(e){throw Error('Another deletion application may be running; inspect data/session-library/apply.lock',{cause:e});}
   let backend;const report={deleted:0,blocked:0,requests:pending.length};
   try{
-    backend=await backendFactory(settings.dshDirectory,sessionPaths(root).sessions);
+    backend=await backendFactory(settings.dshDirectory,paths.sessions);
     for(const request of pending){
       for(const entry of request.sessions){
         if(!['pending','deleting'].includes(entry.state))continue;
-        const recovering=entry.state==='deleting',storage=sessionPaths(root).sessions,directory=contained(storage,join(storage,entry.directory));
-        if(!/^[A-Za-z0-9_-]+$/.test(entry.sessionId)||!entry.directory.endsWith('/'+entry.sessionId))throw Error('Unsupported deletion receipt identity');
-        await noLinks(root,directory,{missing:recovering});let release;
+        const recovering=entry.state==='deleting',storage=paths.sessions,directory=contained(storage,join(storage,entry.directory));
+        if(!/^[A-Za-z0-9_-]{1,220}$/.test(entry.sessionId)||entry.directory.split('/').length!==2||
+          basename(directory)!==entry.sessionId||dirname(dirname(directory))!==storage||entry.identity?.id!==entry.sessionId)throw Error('Unsupported deletion receipt identity');
+        await noLinks(paths.root,directory,{missing:recovering});let release;
         try{
           release=await leaseFactory(settings.dshDirectory,directory);
           // Fresh headers come from the official backend, not filenames or a stale index.
           const records=await backend.list(),headers=records.map(r=>r.header),header=headers.find(h=>h.id===entry.sessionId);
           if(blockers(headers,entry.sessionId).length)throw Error('Another session still depends on this history');
-          if(!recovering){if(!header||digest(identity(header))!==digest(entry.identity))throw Error('Stored session identity changed');const observed=await fingerprintDirectory(root,directory);if(observed.fingerprint!==entry.fingerprint)throw Error('Conversation changed after deletion was requested');}
+          if(!recovering){if(!header||digest(identity(header))!==digest(entry.identity))throw Error('Stored session identity changed');const observed=await fingerprintDirectory(paths,directory);if(observed.fingerprint!==entry.fingerprint)throw Error('Conversation changed after deletion was requested');}
           // Recovery checks every surviving byte against the exact journalled files;
           // a remaining older generation may legitimately expose an older header.
-          await validateDerivedState(root,new Set([entry.sessionId]));
+          await validateDerivedState(paths,new Set([entry.sessionId]));
+          if(typeof root!=='string')await assertNoDesktopSchedule(paths,entry.sessionId);
           // Journal before the first unlink. A crash resumes exact recorded files only.
-          request.state='applying';entry.state='deleting';await writeQueue(root,queue);
-          await removeArtifacts(root,entry);await cleanDerivedState(root,new Set([entry.sessionId]));
+          request.state='applying';entry.state='deleting';await writeQueue(paths,queue);
+          await removeArtifacts(paths,entry);await cleanDerivedState(paths,new Set([entry.sessionId]));
           const remaining=await backend.list();if(remaining.some(r=>r.header.id===entry.sessionId))throw Error('Deleted session remains in the persistence catalog');
-          entry.state='deleted';entry.completedAt=new Date().toISOString();delete entry.error;report.deleted++;await writeQueue(root,queue);
+          entry.state='deleted';entry.completedAt=new Date().toISOString();delete entry.error;report.deleted++;await writeQueue(paths,queue);
         }catch(e){
           if(entry.state==='deleting')throw e; // Do not launch with a half-deleted history.
-          entry.state='blocked';entry.error=e.message;report.blocked++;await writeQueue(root,queue);
+          entry.state='blocked';entry.error=e.message;report.blocked++;await writeQueue(paths,queue);
         }finally{await release?.();}
       }
-      request.state=request.sessions.every(e=>e.state==='deleted')?'deleted':'blocked';request.completedAt=new Date().toISOString();await writeQueue(root,queue);
+      request.state=request.sessions.every(e=>e.state==='deleted')?'deleted':'blocked';request.completedAt=new Date().toISOString();await writeQueue(paths,queue);
     }
     return report;
   }finally{try{await backend?.dispose();}finally{try{await lock?.close();}finally{await unlink(lockPath).catch(e=>{if(e.code!=='ENOENT')throw e;});}}}
 }
-async function main(){const rootIndex=process.argv.indexOf('--root');if(rootIndex<0||!process.argv[rootIndex+1])throw Error('--root is required');const root=resolve(process.argv[rootIndex+1]);await noLinks(root,join(root,'config/environment.json'));const settings=JSON.parse(await readFile(join(root,'config/environment.json'),'utf8'));const queue=await readQueue(root);if(!queue.requests.some(q=>['pending','applying'].includes(q.state)))return;
+async function assertNoDesktopSchedule(paths,sessionId){
+  const file=join(paths.home,'storages/schedule.json');await noLinks(paths.root,file,{missing:true});
+  let value;
+  try{value=JSON.parse(await readFile(file,'utf8'));}catch(error){if(error.code==='ENOENT')return;throw error;}
+  const tasks=value.tables?.tasks;
+  if(value.unit?.name!=='schedule'||![1,2].includes(value.unit.version)||!tasks||typeof tasks!=='object'||Array.isArray(tasks))throw Error('Unsupported scheduled-task storage schema');
+  if(Object.values(tasks).some(task=>task.status==='active'&&(task.target?.sessionId===sessionId||task.involvedSessionIds?.includes(sessionId))))throw Error('An active scheduled task refers to this conversation');
+}
+
+async function assertDesktopStopped(){
+  const powershell=win32.join(process.env.SystemRoot??'C:\\Windows','System32','WindowsPowerShell','v1.0','powershell.exe');
+  const command=`$ErrorActionPreference='Stop'; $apps=@(Get-CimInstance Win32_Process -Filter "Name = 'DeepSeek Harness.exe'"); if(@($apps | Where-Object ProcessId -ne ${process.pid}).Count){exit 3}`;
+  await promisify(execFile)(powershell,['-NoLogo','-NoProfile','-NonInteractive','-Command',command],{windowsHide:true,timeout:10000});
+}
+
+async function applyDesktopQueue(home){
+  if(process.platform!=='win32'||!process.versions.electron||process.env.ELECTRON_RUN_AS_NODE!=='1'||
+    basename(process.execPath).toLowerCase()!=='deepseek harness.exe'||!isAbsolute(process.resourcesPath??'')||
+    resolve(dirname(process.execPath),'resources').toLowerCase()!==resolve(process.resourcesPath).toLowerCase())throw Error('Use the installed Windows Desktop executable in Node mode');
+  const paths=desktopSessionPaths(home);await assertLocalDesktopHome(paths);
+  const queue=await readQueue(paths);
+  if(!queue.requests.some(q=>['pending','applying'].includes(q.state)))return;
+  const settings={dshDirectory:join(process.resourcesPath,'app.asar/dsh')};
+  await assertReviewedRuntime(settings.dshDirectory);
+  // The official Desktop launcher acquires this same profile lock before
+  // starting its Host. Check process absence under the lock, including the tray.
+  const lockPath=join(paths.home,'profiles/desktop/lock');
+  await noLinks(paths.root,lockPath,{missing:true});
+  const lock=await open(lockPath,'wx',0o600);
+  try{
+    await lock.writeFile(`${process.pid}\n`);await lock.sync();
+    return await applyDeletions({settings,paths,stopped:assertDesktopStopped});
+  }finally{try{await lock.close();}finally{await unlink(lockPath);}}
+}
+
+async function main(){
+  const [flag,value,...rest]=process.argv.slice(2);
+  if(!value||rest.length)throw Error('Specify --root or --desktop-home with one local absolute path');
+  if(flag==='--desktop-home'){
+    const report=await applyDesktopQueue(value);
+    if(report)console.log(`Session Library: ${report.deleted} deleted, ${report.blocked} blocked.`);
+    return;
+  }
+  if(flag!=='--root')throw Error('--root is required');
+  const root=resolve(value);await noLinks(root,join(root,'config/environment.json'));const settings=JSON.parse(await readFile(join(root,'config/environment.json'),'utf8'));const queue=await readQueue(root);if(!queue.requests.some(q=>['pending','applying'].includes(q.state)))return;
   await assertReviewedRuntime(settings.dshDirectory);
   const report=await applyDeletions({root,settings});console.log(`Session Library: ${report.deleted} deleted, ${report.blocked} blocked.`);
 }

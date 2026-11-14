@@ -12,7 +12,7 @@ build and profile.
 | Native window opacity | Unavailable: a web page cannot change the browser window's native opacity | Available when explicitly enabled and the owned Desktop window can be identified; affects text and the whole window |
 | Image viewer | Supported | Supported |
 | Japanese language | Built into DSH 0.2.2 | Built into DSH 0.2.2 |
-| Session Library and permanent deletion | Supported by the managed Web adapter | Not supported; keep `studio-sessions` disabled |
+| Session Library and permanent deletion | Reservations apply at managed Web startup | Reservations apply at managed Windows Desktop 0.2.2-rc.3 startup after quitting the tray app. Workspace appearance remains on Web. |
 | Host restart | Supported by the managed Web adapter | Not supported; keep `studio-host` disabled |
 
 Desktop plugin activation and the native opacity helper have separate runtime

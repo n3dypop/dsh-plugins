@@ -1,6 +1,7 @@
 # Session Library
 
-Conversation organization and workspace appearance for the managed standalone Web Host. See [compatibility](../../../docs/compatibility.md) for supported releases and the Desktop boundary.
+Conversation deletion for managed Web and Windows Desktop, with workspace
+appearance controls on Web. See [compatibility](../../../docs/compatibility.md).
 Open **Settings → Session Library** to filter by title/ID, workspace,
 Uncategorized, archive state, date or empty conversations.
 
@@ -8,14 +9,15 @@ Uncategorized, archive state, date or empty conversations.
 
 Select eligible rows and inspect the exact conversations and recorded log sizes
 before **Queue deletion**. Reservations can be cancelled. Permanent deletion is
-applied before the next genuine DSH startup, while DSH is absent; queuing does
-not archive conversations, restart DSH or immediately remove active sessions.
+applied before the next managed DSH startup. On Desktop, quit from the Windows
+tray and open `Open-DSH-Desktop.cmd`. Launching from the regular Desktop shortcut
+leaves reservations pending. Each edition works on its own history and queue.
 
 A matching managed launcher must invoke
 [scripts/maintenance/Apply-SessionDeletions.mjs](../../../scripts/maintenance/Apply-SessionDeletions.mjs)
-before starting DSH. Configure the explicit private runtime as described in
-[configuration](../../../docs/configuration.md). Do not run the adapter against
-a live DSH process.
+before starting DSH. Follow [configuration](../../../docs/configuration.md) for
+the Web runtime and the Desktop home. Do not run the adapter against a live DSH
+process.
 
 The Windows JSONL adapter is bound to the supported DSH persistence layout. It
 checks exact session identities, lineage, committed file fingerprints and the
@@ -49,7 +51,8 @@ presentation without deleting preferences.
 
 ## Maintenance and extensions
 
-Private records live under `data/session-library/`. The public child slots
+Private records live under `data/session-library/` on Web and under
+`$DSH_HOME/session-library/` on Desktop. The public child slots
 `studio.sessions.sections` and `studio.sessions.workspace.fields` allow
 separately owned UI extensions; they grant no write or execution authority.
 
