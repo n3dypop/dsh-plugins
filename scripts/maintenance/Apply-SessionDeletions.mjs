@@ -7,11 +7,18 @@ import {createConnection} from 'node:net';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {readQueue,writeQueue,sessionPaths,desktopSessionPaths,assertLocalDesktopHome,noLinks,contained,digest,identity,blockers,fingerprintDirectory,removeArtifacts,cleanDerivedState,validateDerivedState} from '../../apps/dsh-plugins/studio-sessions/session-store.mjs';
-import {openBackend,acquireLease} from '../../apps/dsh-plugins/studio-sessions/offline-backend.mjs';
+import {openBackend,acquireLease,acquireWindowsSemaphore} from '../../apps/dsh-plugins/studio-sessions/offline-backend.mjs';
 
-export async function assertDshStopped(root,settings){
-  try{const record=JSON.parse(await readFile(join(root,'runtime/DSH.json'),'utf8'));if(Number.isInteger(record.processId)){try{process.kill(record.processId,0);throw Error('DSH process is still present; session deletion is offline-only');}catch(e){if(e.code!=='ESRCH')throw e;}}}catch(e){if(e.code!=='ENOENT')throw e;}
+export async function assertDshStopped(root,settings,startingPid){
+  const recordPath=join(root,'runtime/DSH.json');await noLinks(root,recordPath,{missing:true});
+  try{const record=JSON.parse(await readFile(recordPath,'utf8'));if(Number.isInteger(record.processId)&&record.processId!==startingPid){try{process.kill(record.processId,0);throw Error('DSH process is still present; session deletion is offline-only');}catch(e){if(e.code!=='ESRCH')throw e;}}}catch(e){if(e.code!=='ENOENT')throw e;}
   await new Promise((done,fail)=>{const socket=createConnection({host:'127.0.0.1',port:settings.dshPort});socket.setTimeout(5000);socket.once('connect',()=>{socket.destroy();fail(Error('DSH is listening; offline session deletion was refused'));});socket.once('timeout',()=>{socket.destroy();fail(Error('Cannot establish that DSH is stopped'));});socket.once('error',error=>error.code==='ECONNREFUSED'?done():fail(error));});
+}
+
+export async function acquireWebProfile(paths,dshDirectory){
+  const home=await realpath(paths.home);
+  const name='Local\\dsh-studio-session-web-'+createHash('sha256').update(home.toLowerCase()).digest('hex');
+  return acquireWindowsSemaphore(dshDirectory,name,'Another Web Host or deletion operation owns this profile');
 }
 // The hashes pin the five backend entry points reviewed against the official
 // release payloads. Unknown versions, builds and paths fail closed.
@@ -79,7 +86,7 @@ export async function applyDeletions({root,settings,paths=sessionPaths(root),sto
           // Recovery checks every surviving byte against the exact journalled files;
           // a remaining older generation may legitimately expose an older header.
           await validateDerivedState(paths,new Set([entry.sessionId]));
-          if(typeof root!=='string')await assertNoDesktopSchedule(paths,entry.sessionId);
+          await assertNoActiveSchedule(paths,entry.sessionId);
           // Journal before the first unlink. A crash resumes exact recorded files only.
           request.state='applying';entry.state='deleting';await writeQueue(paths,queue);
           await removeArtifacts(paths,entry);await cleanDerivedState(paths,new Set([entry.sessionId]));
@@ -95,7 +102,7 @@ export async function applyDeletions({root,settings,paths=sessionPaths(root),sto
     return report;
   }finally{try{await backend?.dispose();}finally{try{await lock?.close();}finally{await unlink(lockPath).catch(e=>{if(e.code!=='ENOENT')throw e;});}}}
 }
-async function assertNoDesktopSchedule(paths,sessionId){
+async function assertNoActiveSchedule(paths,sessionId){
   const file=join(paths.home,'storages/schedule.json');await noLinks(paths.root,file,{missing:true});
   let value;
   try{value=JSON.parse(await readFile(file,'utf8'));}catch(error){if(error.code==='ENOENT')return;throw error;}
@@ -148,6 +155,8 @@ async function main(){
   if(flag!=='--root')throw Error('--root is required');
   const root=resolve(value);await noLinks(root,join(root,'config/environment.json'));const settings=JSON.parse(await readFile(join(root,'config/environment.json'),'utf8'));const queue=await readQueue(root);if(!queue.requests.some(q=>['pending','applying'].includes(q.state)))return;
   await assertReviewedRuntime(settings.dshDirectory);
-  const report=await applyDeletions({root,settings});console.log(`Session Library: ${report.deleted} deleted, ${report.blocked} blocked.`);
+  const release=await acquireWebProfile(sessionPaths(root),settings.dshDirectory);
+  try{const report=await applyDeletions({root,settings});console.log(`Session Library: ${report.deleted} deleted, ${report.blocked} blocked.`);}
+  finally{release();}
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))main().catch(error=>{console.error('Session deletion was not completed: '+error.message);process.exitCode=1;});

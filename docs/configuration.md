@@ -23,8 +23,8 @@ accept from an agent prompt or arbitrary URL.
 Host restart also needs a verified managed launcher and process record. A
 profile entry alone does not turn an arbitrary DSH process into a managed one.
 Preserve the startup receipt, generation identity and configured launcher;
-unknown ownership must fail closed. Session deletion likewise requires the
-matching pre-startup deletion adapter and supported persistence format.
+unknown ownership must fail closed. Session deletion requires a supported
+persistence format and the startup plugin for the active profile.
 
 For Session Library, private `config/environment.json` must declare the supported
 layout. This is a minimal adapter fragment, not a complete DSH configuration:
@@ -42,16 +42,26 @@ resolve `@deepseek-ai/dsh/package.json` and the supported persistence/native
 write-lease dependencies. The offline adapter explicitly checks DSH
 `0.2.1-rc.5` or the hash-reviewed builds of `0.2.2-rc.1` and `0.2.2-rc.3`. A source clone or
 an arbitrary newer executable alone is not sufficient.
-Before starting DSH, the managed launcher runs:
+On Windows Web, enable Session Library with `config: { runtimeRoot: ABSOLUTE_PRIVATE_RUNTIME_ROOT }`
+and add the following rows to the stopped Web profile. The configured DSH home,
+installed npm runtime, and loopback port must match the running profile.
 
-```powershell
-node '<this-checkout>/scripts/maintenance/Apply-SessionDeletions.mjs' --root '<private-runtime>'
+```yaml
+- insert:
+    - id: studio-sessions-web-startup
+      name: file:///ABSOLUTE_PLUGIN_CHECKOUT/apps/dsh-plugins/studio-sessions/web-startup.mjs
+      config:
+        runtimeRoot: ABSOLUTE_PRIVATE_RUNTIME_ROOT
+- id: session-persistence-jsonl
+  inject: [studioSessionStartup]
+- id: storage-json
+  inject: [studioSessionStartup]
+- id: webserver
+  inject: [webStartup, studioSessionStartup]
 ```
 
-The adapter requires the managed DSH process to be stopped and its port free.
-It exits without deletion if there are no pending reservations. A launcher must
-stop when the adapter fails instead of starting DSH against a partially applied
-deletion. Never run this step while another process uses the same session store.
+The profile holds a Windows semaphore through the Host's lifetime to exclude a
+second startup or an offline maintenance run on the same Web home.
 
 For Windows Desktop 0.2.2-rc.3, enable the same entry with
 `config: { platform: desktop }` and apply these rows to the Desktop profile
@@ -70,10 +80,11 @@ already require. Replace the module URL with the local checkout URL.
   inject: [webStartup, studioSessionStartup]
 ```
 
-Desktop opens its session store, workspace state, and HTTP service after the
-startup plugin finishes. The plugin checks the installed runtime and uses
-the offline adapter with the native write lease. It skips deletion during a
-live profile reload. Quit Desktop from the tray before the next ordinary launch.
+Both editions open their session store, workspace state, and HTTP service after
+the startup plugin finishes. The plugin checks the installed runtime and uses
+the native write lease. Deletion requires a fresh Host startup. Quit Desktop
+from the Windows tray, or stop the Web Host before starting it again. Closing a
+browser tab does not stop the Web Host.
 Desktop reservations stay under its own DSH home. The Web queue stays in the
 Web runtime.
 

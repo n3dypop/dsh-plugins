@@ -9,15 +9,13 @@ Uncategorized, archive state, date or empty conversations.
 
 Select eligible rows and inspect the exact conversations and recorded log sizes
 before **Queue deletion**. Reservations can be cancelled. Permanent deletion is
-applied before the next managed Web startup or the next Desktop startup with
-the startup plugin enabled. On Desktop, quit from the Windows tray and reopen
-the app normally. Each edition works on its own history and queue.
+applied at the next Host startup with the startup plugin enabled. On Desktop,
+quit from the Windows tray and reopen the app normally. For Web, restart the
+Web Host. Each edition works on its own history and queue.
 
-The Web launcher invokes
-[scripts/maintenance/Apply-SessionDeletions.mjs](../../../scripts/maintenance/Apply-SessionDeletions.mjs)
-before starting DSH. Desktop runs the same deletion logic before session storage
-and workspace services activate. See [configuration](../../../docs/configuration.md)
-for both profiles.
+Both profiles run the same deletion logic before session storage and workspace
+services activate. See [configuration](../../../docs/configuration.md) for the
+startup dependencies.
 
 The Windows JSONL adapter is bound to the supported DSH persistence layout. It
 checks exact session identities, lineage, committed file fingerprints and the

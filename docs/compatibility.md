@@ -12,7 +12,7 @@ build and profile.
 | Native window opacity | Unavailable: a web page cannot change the browser window's native opacity | Available when explicitly enabled and the owned Desktop window can be identified; affects text and the whole window |
 | Image viewer | Supported | Supported |
 | Japanese language | Built into DSH 0.2.2 | Built into DSH 0.2.2 |
-| Session Library and permanent deletion | Reservations apply at managed Web startup | On Windows Desktop 0.2.2-rc.3, enable `platform: desktop` and the startup plugin. Quit the tray app before reopening it normally. |
+| Session Library and permanent deletion | Enable the Windows Web startup plugin. Reservations apply when the Web Host next starts. | On Windows Desktop 0.2.2-rc.3, enable `platform: desktop` and the startup plugin. Quit the tray app before reopening it normally. |
 | Workspace icons and colors | Stored in the Web runtime | Available with Session Library enabled. Stored in the Desktop DSH home. |
 | Host restart | Supported by the managed Web adapter | Not supported; keep `studio-host` disabled |
 

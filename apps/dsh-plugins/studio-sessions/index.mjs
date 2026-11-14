@@ -20,13 +20,13 @@ export function assertWebSessionHost(versions=process.versions){
 }
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const refuse=(message,status=409)=>{throw Object.assign(Error(message),{status});};
-export function createLibrary({root,list,live,desktop=false,desktopStartup=false,now=()=>Date.now(),uuidFactory=randomUUID}){
+export function createLibrary({root,list,live,desktop=false,startup=false,now=()=>Date.now(),uuidFactory=randomUUID}){
   const previews=new Map();let tail=Promise.resolve();
   const exclusive=operation=>{const current=tail.then(operation);tail=current.catch(()=>{});return current;};
   const busy=id=>{const value=live(id);return Boolean(value?.running||value?.pending);};
   async function headers(){return (await list()).map(record=>record.header);}
   const receipts=queue=>queue.requests.map(({id,requestedAt,state,sessions,error})=>({id,requestedAt,state,count:sessions.length,sessionIds:sessions.map(s=>s.sessionId),...(error?{error}:{}),results:sessions.map(s=>({sessionId:s.sessionId,state:s.state??state,error:s.error??null}))}));
-  async function snapshot(){const current=await headers(),queue=await readQueue(root);return {desktop,desktopStartup,revision:digest(current.map(h=>[identity(h),live(h.id)])),sessions:current.map(h=>({sessionId:h.id,createdAt:h.createdAt,busy:busy(h.id),origin:h.origin??null,dependencies:blockers(current,h.id),pending:queue.requests.some(q=>q.state==='pending'&&q.sessions.some(s=>s.sessionId===h.id))})),requests:receipts(queue)};}
+  async function snapshot(){const current=await headers(),queue=await readQueue(root);return {desktop,startup,revision:digest(current.map(h=>[identity(h),live(h.id)])),sessions:current.map(h=>({sessionId:h.id,createdAt:h.createdAt,busy:busy(h.id),origin:h.origin??null,dependencies:blockers(current,h.id),pending:queue.requests.some(q=>q.state==='pending'&&q.sessions.some(s=>s.sessionId===h.id))})),requests:receipts(queue)};}
   async function prepare(input){
     if(!Array.isArray(input.sessionIds)||!input.sessionIds.length||input.sessionIds.length>100||new Set(input.sessionIds).size!==input.sessionIds.length||input.sessionIds.some(id=>typeof id!=='string'||!/^[A-Za-z0-9_-]+$/.test(id)||id.length>220))refuse('削除対象の指定が不正です。',400);
     for(const [id,value] of previews)if(value.expiresAt<now())previews.delete(id);
@@ -69,7 +69,7 @@ export async function apply(ctx,config){
     if(settings.dshHome!=='data/dsh'||!Number.isInteger(settings.dshPort))throw Error('Session Library requires the verified runtime session layout');
     origin=`http://127.0.0.1:${settings.dshPort}`;
   }
-  const library=createLibrary({root,desktop,desktopStartup:desktop&&ctx.get('studioSessionStartup')===true,list:()=>ctx.sessionPersistence.list(),live:id=>{const agent=ctx.agents.get(id),session=ctx.sessions.get(id);return {running:agent?.status==='running',pending:Boolean(agent?.inbox?.hasPending),seq:session?.seq??null};}});
+  const library=createLibrary({root,desktop,startup:ctx.get('studioSessionStartup')===true,list:()=>ctx.sessionPersistence.list(),live:id=>{const agent=ctx.agents.get(id),session=ctx.sessions.get(id);return {running:agent?.status==='running',pending:Boolean(agent?.inbox?.hasPending),seq:session?.seq??null};}});
   register(PATH,'sessions','x-local-studio-sessions',options=>libraryHandler({library,...options}));
   const visuals=createWorkspaceVisuals({root,list:()=>ctx.workspaceRegistry.list()});
   register(WORKSPACE_PATH,'workspace-visuals','x-local-studio-workspaces',options=>workspaceVisualsHandler({store:visuals,...options}));

@@ -75,8 +75,8 @@ Turning it off restores the account menu. Windows Desktop also supports window
 opacity in the same section. Click an image attachment to open the viewer.
 
 **Session Library** supports filtering, selection and workspace appearance.
-Permanent deletion is previewed and reserved, then applied at the next managed
-Web startup or normal Desktop startup with the startup plugin enabled. Shared attachments and
+Permanent deletion is previewed and reserved, then applied when the Web Host
+or Desktop next starts with its startup plugin enabled. Shared attachments and
 external production outputs are not deleted by this action. Unsupported,
 changed or referenced session records are held for review.
 
