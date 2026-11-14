@@ -53,13 +53,29 @@ It exits without deletion if there are no pending reservations. A launcher must
 stop when the adapter fails instead of starting DSH against a partially applied
 deletion. Never run this step while another process uses the same session store.
 
-For managed Windows Desktop 0.2.2-rc.3, enable the same entry on the Desktop
-profile with `config: { platform: desktop }`. The plugin checks the native
-session backend and takes the home from that profile. The managed Desktop
-launcher passes the same home to `Apply-SessionDeletions.mjs --desktop-home`
-using the installed Electron executable in Node mode, then starts the app.
-Quit from the tray before using the managed launcher. The Web queue stays in
-the Web runtime and Desktop reservations stay under its own DSH home.
+For Windows Desktop 0.2.2-rc.3, enable the same entry with
+`config: { platform: desktop }` and apply these rows to the Desktop profile
+while the tray app is closed. Preserve any other injections the native rows
+already require. Replace the module URL with the local checkout URL.
+
+```yaml
+- insert:
+    - id: studio-sessions-desktop-startup
+      name: file:///ABSOLUTE_PLUGIN_CHECKOUT/apps/dsh-plugins/studio-sessions/desktop-startup.mjs
+- id: session-persistence-jsonl
+  inject: [studioSessionStartup]
+- id: storage-json
+  inject: [studioSessionStartup]
+- id: webserver
+  inject: [webStartup, studioSessionStartup]
+```
+
+Desktop opens its session store, workspace state, and HTTP service after the
+startup plugin finishes. The plugin checks the installed runtime and uses
+the offline adapter with the native write lease. It skips deletion during a
+live profile reload. Quit Desktop from the tray before the next ordinary launch.
+Desktop reservations stay under its own DSH home. The Web queue stays in the
+Web runtime.
 
 The host configuration requires `launcher.executable`, an array of `launcher.args`
 and absolute `launcher.cwd`. Set `nodeExecutable` when the managed DSH executable

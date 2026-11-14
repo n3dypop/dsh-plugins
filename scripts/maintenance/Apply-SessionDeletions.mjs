@@ -110,24 +110,31 @@ async function assertDesktopStopped(){
   await promisify(execFile)(powershell,['-NoLogo','-NoProfile','-NonInteractive','-Command',command],{windowsHide:true,timeout:10000});
 }
 
-async function applyDesktopQueue(home){
+export function desktopRuntime(){
   if(process.platform!=='win32'||!process.versions.electron||process.env.ELECTRON_RUN_AS_NODE!=='1'||
     basename(process.execPath).toLowerCase()!=='deepseek harness.exe'||!isAbsolute(process.resourcesPath??'')||
     resolve(dirname(process.execPath),'resources').toLowerCase()!==resolve(process.resourcesPath).toLowerCase())throw Error('Use the installed Windows Desktop executable in Node mode');
-  const paths=desktopSessionPaths(home);await assertLocalDesktopHome(paths);
-  const queue=await readQueue(paths);
-  if(!queue.requests.some(q=>['pending','applying'].includes(q.state)))return;
-  const settings={dshDirectory:join(process.resourcesPath,'app.asar/dsh')};
-  await assertReviewedRuntime(settings.dshDirectory);
-  // The official Desktop launcher acquires this same profile lock before
-  // starting its Host. Check process absence under the lock, including the tray.
+  return join(process.resourcesPath,'app.asar/dsh');
+}
+
+export async function withDesktopProfileLock(paths,operation){
+  // Share the official profile preparation lock with Electron and the offline CLI.
   const lockPath=join(paths.home,'profiles/desktop/lock');
   await noLinks(paths.root,lockPath,{missing:true});
   const lock=await open(lockPath,'wx',0o600);
   try{
     await lock.writeFile(`${process.pid}\n`);await lock.sync();
-    return await applyDeletions({settings,paths,stopped:assertDesktopStopped});
+    return await operation();
   }finally{try{await lock.close();}finally{await unlink(lockPath);}}
+}
+
+async function applyDesktopQueue(home){
+  const settings={dshDirectory:desktopRuntime()};
+  const paths=desktopSessionPaths(home);await assertLocalDesktopHome(paths);
+  const queue=await readQueue(paths);
+  if(!queue.requests.some(q=>['pending','applying'].includes(q.state)))return;
+  await assertReviewedRuntime(settings.dshDirectory);
+  return await withDesktopProfileLock(paths,()=>applyDeletions({settings,paths,stopped:assertDesktopStopped}));
 }
 
 async function main(){
