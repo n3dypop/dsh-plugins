@@ -13,9 +13,28 @@ window.__ModuleLoader__.load({
     const css=`
       .siv-gallery{display:flex;flex-wrap:wrap;gap:10px;max-width:100%}.siv-gallery[data-align=end]{justify-content:flex-end;align-self:flex-end}.siv-thumb{padding:0!important;overflow:hidden;display:grid!important;place-items:center;flex:0 0 auto;max-width:100%;cursor:zoom-in;border-radius:var(--dsw-radius-lg,12px)!important;background:var(--dsw-alias-interactive-bg-hover)!important}.siv-thumb img{display:block;width:100%;height:100%;object-fit:contain}.siv-loading{font-size:12px;color:var(--dsw-alias-label-secondary);padding:8px;overflow-wrap:anywhere}
       .siv-dialog{position:fixed;inset:var(--dsh-frame-chrome-top,0px) 0 0;z-index:1200;isolation:isolate;display:flex;flex-direction:column;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-mask-1,rgba(0,0,0,.8));backdrop-filter:var(--dsw-mask-blur);font-family:var(--dsw-font-family,inherit)}.siv-toolbar{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;background:var(--dsw-alias-bg-layer-1);border-bottom:1px solid var(--dsw-alias-border-l2);flex-shrink:0;flex-wrap:wrap;box-shadow:0 2px 12px color-mix(in srgb,var(--dsw-alias-label-primary) 4%,transparent)}.siv-title{display:flex;align-items:center;gap:10px;min-width:0;flex:1}.siv-title-mark{display:grid;place-items:center;width:34px;height:34px;flex:none;border:1px solid var(--dsw-alias-border-l2);border-radius:10px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-state-business-primary)}.siv-title-text{min-width:0}.siv-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:600}.siv-dimensions{font-size:11px;color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums;margin-top:2px}.siv-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}.siv-toolgroup{display:flex;align-items:center;gap:2px;border:1px solid var(--dsw-alias-border-l2);border-radius:11px;padding:3px;background:var(--dsw-alias-bg-layer-2)}.siv-toolgroup button{min-width:28px}.siv-symbol{display:inline-grid;place-items:center;font-size:18px;width:16px;line-height:16px;font-weight:400}.siv-zoom{min-width:56px;text-align:center;font-size:12px;font-variant-numeric:tabular-nums}.siv-stage{position:relative;flex:1;min-height:0;margin:16px;overflow:hidden;touch-action:none;outline-offset:2px;user-select:none}.siv-stage:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary)}.siv-image{position:absolute;left:50%;top:50%;transform-origin:center;display:block;max-width:none!important;max-height:none!important;border-radius:0!important;border:0!important;box-shadow:none!important;background:none!important;user-select:none;pointer-events:none}.siv-footer{padding:0 16px 12px;font-size:11px;line-height:1.5;color:var(--dsw-alias-label-primary)}.siv-error{position:absolute;inset:0;display:grid;place-items:center;color:var(--dsw-alias-label-primary);font-size:14px;text-align:center;padding:20px}@media(max-width:520px){.siv-toolbar{padding:8px;gap:8px}.siv-title{flex-basis:100%}.siv-name{font-size:12px}.siv-actions{justify-content:center;width:100%;gap:5px}.siv-toolgroup{padding:2px;gap:0}.siv-stage{margin:8px}.siv-footer{padding:0 8px 8px;font-size:10px}}`;
-    Object.assign(dictionaries.en,{compare:'Compare',before:'Before',after:'After',chooseBefore:'Choose an older image',chooseFile:'Choose a file',pinBefore:'Use as Before',pinnedBefore:'Set as Before',endCompare:'End comparison',compareError:'Could not open the older image.'});
-    Object.assign(dictionaries.ja,{compare:'新旧比較',before:'変更前',after:'変更後',chooseBefore:'比較元の画像を選ぶ',chooseFile:'ファイルから選ぶ',pinBefore:'変更前に指定',pinnedBefore:'変更前に指定済み',endCompare:'比較を終了',compareError:'比較元の画像を開けませんでした。'});
-    const compareCss=`.siv-comparison{flex:1;min-height:0;margin:16px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.siv-comparison figure{margin:0;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr);gap:8px;padding:8px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px}.siv-comparison img{width:100%;height:100%;min-height:0;object-fit:contain}.siv-comparison figcaption{overflow-wrap:anywhere;font-size:12px}.siv-compare-controls{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.siv-compare-controls select{max-width:12rem;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2)}@media(max-width:600px){.siv-comparison{grid-template-columns:1fr;grid-template-rows:repeat(2,minmax(0,1fr));gap:6px;margin:8px}}`;
+    Object.assign(dictionaries.en,{compare:'Compare',before:'Before',after:'After',chooseBefore:'Choose an older image',chooseFile:'Choose a file',pinBefore:'Use as Before',pinnedBefore:'Set as Before',endCompare:'End comparison',compareError:'Could not open the older image.',sideBySide:'Side by side',wipe:'Slider',divider:'Position of comparison divider'});
+    Object.assign(dictionaries.ja,{compare:'新旧比較',before:'変更前',after:'変更後',chooseBefore:'比較元の画像を選ぶ',chooseFile:'ファイルから選ぶ',pinBefore:'変更前に指定',pinnedBefore:'変更前に指定済み',endCompare:'比較を終了',compareError:'比較元の画像を開けませんでした。',sideBySide:'並べて比較',wipe:'スライダー比較',divider:'比較の境界位置'});
+    const compareCss=`
+      .siv-dialog{background:rgba(10,12,15,.85);backdrop-filter:grayscale(.8) blur(5px)}
+      .siv-toolbar{margin:12px 14px 0;gap:10px;border:1px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-lg,14px);background:var(--dsw-alias-bg-layer-2);box-shadow:0 5px 20px #0005}
+      .siv-toolgroup{background:var(--dsw-alias-bg-layer-1)}
+      .siv-footer,.siv-error{color:#f4f4f6}
+      .siv-comparison{flex:1;min-height:0;margin:12px 14px 14px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+      .siv-comparison figure{margin:0;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;border:1px solid #fff3;border-radius:10px;background:#17191d;color:#f4f4f6}
+      .siv-comparison img{display:block;width:100%;height:100%;min-height:0;object-fit:contain}
+      .siv-comparison figcaption{overflow-wrap:anywhere;font-size:12px;padding:8px 12px;background:#24262b}
+      .siv-compare-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 14px;color:#f4f4f6}
+      .siv-compare-controls select{max-width:14rem;padding:5px 9px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2)}
+      .siv-wipe{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto}
+      .siv-wipe figure{grid-template-rows:auto minmax(0,1fr)}
+      .siv-wipe figcaption{display:flex;justify-content:space-between;gap:10px}
+      .siv-wipe-stage{position:relative;overflow:hidden;min-height:0;touch-action:pan-y}
+      .siv-wipe-stage img{position:absolute;inset:0}
+      .siv-wipe-line{position:absolute;inset-block:0;width:2px;background:#fff;box-shadow:0 0 4px #000;pointer-events:none}
+      .siv-wipe-range{width:100%;margin:0;accent-color:var(--dsw-alias-state-business-primary)}
+      @media(max-width:600px){.siv-toolbar{margin:8px 8px 0}.siv-comparison:not(.siv-wipe){grid-template-columns:1fr;grid-template-rows:repeat(2,minmax(0,1fr));gap:6px;margin:8px}}
+    `;
     const validSize=n=>Number.isFinite(n)&&n>0&&n<=100000;
     const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
     function fitScale(image,viewport){return validSize(image.width)&&validSize(image.height)&&validSize(viewport.width)&&validSize(viewport.height)?clamp(Math.min(1,viewport.width/image.width,viewport.height/image.height),MIN,MAX):1;}
@@ -53,6 +72,7 @@ window.__ModuleLoader__.load({
       const stage=useRef(null),dialog=useRef(null),close=useRef(null),pointers=useRef(new Map()),gesture=useRef(null),backdrop=useRef(null);
       const filePicker=useRef(null),compareRequest=useRef(0),ownedUrl=useRef(null);
       const [comparing,setComparing]=useState(false),[baseline,setBaseline]=useState(null),[compareError,setCompareError]=useState(false);
+      const [compareMode,setCompareMode]=useState('side'),[divider,setDivider]=useState(50);
       const [pinned,setPinned]=useState(()=>sessionId?(pinnedSession?.sessionId===sessionId?pinnedSession.item:null):pinnedByLoader.get(loadImage));
       const compareState=useRef(false);compareState.current=comparing;
       function pinBefore(){
@@ -96,7 +116,7 @@ window.__ModuleLoader__.load({
           const c=current.current;
           if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onClose();return;}
           if(e.key==='Tab'){
-            const controls=[...dialog.current.querySelectorAll('button:not([disabled]),select:not([disabled]),[tabindex="0"]')].filter(el=>!el.closest('[hidden]')),first=controls[0],last=controls.at(-1);
+            const controls=[...dialog.current.querySelectorAll('button:not([disabled]),select:not([disabled]),input[type="range"]:not([disabled]),[tabindex="0"]')].filter(el=>!el.closest('[hidden]')),first=controls[0],last=controls.at(-1);
             if(e.shiftKey&&(document.activeElement===first||!dialog.current.contains(document.activeElement))){e.preventDefault();last?.focus();}
             else if(!e.shiftKey&&(document.activeElement===last||!dialog.current.contains(document.activeElement))){e.preventDefault();first?.focus();}return;
           }
@@ -137,8 +157,17 @@ window.__ModuleLoader__.load({
         comparing?h('div',{className:'siv-compare-controls'},
           alternatives.length?h('select',{'aria-label':labels.chooseBefore,defaultValue:'',onChange:e=>{if(e.target.value)void compareWith(alternatives[Number(e.target.value)-1]);}},h('option',{value:'',disabled:true},labels.chooseBefore),...alternatives.map((item,i)=>h('option',{key:i,value:i+1},item.label??item.attachment?.name??item.preview?.name??`${labels.before} ${i+1}`))):null,
           h('input',{ref:filePicker,hidden:true,type:'file',accept:'image/png,image/jpeg,image/webp,image/gif',onChange:e=>{const file=e.target.files?.[0];e.target.value='';if(file)void compareWith(null,file);}}),
-          h(Button,{type:'button',size:'sm',variant:'outline',onClick:()=>filePicker.current?.click()},labels.chooseFile)) : null,
-        comparing?h('div',{className:'siv-comparison'},h('figure',null,h('figcaption',null,[labels.before,baseline?.label].filter(Boolean).join(' · ')),baseline?h('img',{src:baseline.url,alt:baseline.label??labels.before,onError:()=>setCompareError(true)}):null,compareError?h('span',{role:'alert'},labels.compareError):null),h('figure',null,h('figcaption',null,`${labels.after} · ${alt}`),h('img',{src,alt}))) : null,
+          h(Button,{type:'button',size:'sm',variant:'outline',onClick:()=>filePicker.current?.click()},labels.chooseFile),
+          ...[['side',labels.sideBySide],['wipe',labels.wipe]].map(([mode,label])=>h(Button,{key:mode,type:'button',size:'sm',variant:'outline','aria-pressed':compareMode===mode,disabled:mode==='wipe'&&!baseline,onClick:()=>setCompareMode(mode)},label)),
+          compareError?h('span',{role:'alert'},labels.compareError):null) : null,
+        comparing&&(compareMode==='wipe'&&baseline
+          ?h('div',{className:'siv-comparison siv-wipe'},
+            h('figure',null,h('figcaption',null,h('span',null,`${labels.before} · ${baseline.label??''}`),h('span',null,`${labels.after} · ${alt}`)),
+              h('div',{className:'siv-wipe-stage'},h('img',{src,alt,draggable:false}),
+                h('img',{src:baseline.url,alt:baseline.label??labels.before,draggable:false,onError:()=>setCompareError(true),style:{clipPath:`inset(0 ${100-divider}% 0 0)`}}),
+                h('span',{className:'siv-wipe-line','aria-hidden':true,style:{left:`${divider}%`}}))),
+            h('input',{type:'range',className:'siv-wipe-range',min:0,max:100,value:divider,'aria-label':labels.divider,onChange:e=>setDivider(Number(e.target.value))}))
+          :h('div',{className:'siv-comparison'},h('figure',null,h('figcaption',null,[labels.before,baseline?.label].filter(Boolean).join(' · ')),baseline?h('img',{src:baseline.url,alt:baseline.label??labels.before,onError:()=>setCompareError(true)}):null),h('figure',null,h('figcaption',null,`${labels.after} · ${alt}`),h('img',{src,alt})))),
         h('div',{ref:stage,className:'siv-stage',hidden:comparing,tabIndex:comparing?-1:0,'aria-label':labels.panArea??dictionaries.en['image.panArea'],style:{display:comparing?'none':undefined,cursor:dragging?'grabbing':view.scale>fitScale(image,viewport)?'grab':'default'},onPointerDown:pointerDown,onPointerMove:pointerMove,onPointerUp:e=>pointerEnd(e,true),onPointerCancel:e=>pointerEnd(e,false),onLostPointerCapture:e=>pointerEnd(e,false),onDoubleClick:e=>{const c=current.current;zoom(Math.abs(c.view.scale-1)<.01?fitScale(c.image,c.viewport):1,point(e));}},
           failed?h('p',{className:'siv-error',role:'alert'},labels.renderFailed??dictionaries.en['image.renderFailed']):null,
           h('img',{className:'siv-image',src,alt,draggable:false,style:{width:image.width,height:image.height,transform:`translate(-50%, -50%) translate(${view.x}px, ${view.y}px) scale(${view.scale})`,borderRadius:0},onLoad:e=>{const n=e.currentTarget;if(validSize(n.naturalWidth)&&validSize(n.naturalHeight)){setImage({width:n.naturalWidth,height:n.naturalHeight});setFailed(false);}},onError:()=>setFailed(true)})),
@@ -170,7 +199,7 @@ window.__ModuleLoader__.load({
     function ImageContent(props){
       const images=Array.isArray(props.images)?props.images:[];if(!images.length)return null;
       const labels=labelsFor(props),variant=props.thumbnail?'thumbnail':props.compact||images.length>1?'tile':'single';
-      const comparison=Object.fromEntries(['compare','before','after','chooseBefore','chooseFile','pinBefore','pinnedBefore','endCompare','compareError'].map(key=>[key,translated(props,key,dictionaries.en[key])]));
+      const comparison=Object.fromEntries(['compare','before','after','chooseBefore','chooseFile','pinBefore','pinnedBefore','endCompare','compareError','sideBySide','wipe','divider'].map(key=>[key,translated(props,key,dictionaries.en[key])]));
       return h('div',{className:'siv-gallery','data-align':props.align},h('style',null,css),...images.map((image,i)=>h(GalleryImage,{key:`${image?.attachment?.attachmentId??image?.preview?.url??'image'}:${i}`,image,loadImage:props.loadImage,variant,sessionId:props.comparisonSession,labels:{...labels,lightbox:{...comparison,...labels.lightbox}},alternatives:images.filter((other,j)=>j!==i&&(other?.attachment||previewUrl(other)))})));
     }
     const Adapter=props=>props.renderFactorySlot(FACTORY,{images:props.images,loadImage:props.loadImage,align:props.align,compact:props.compact,thumbnail:props.thumbnail,comparisonSession:props.comparisonSession});

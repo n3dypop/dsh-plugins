@@ -86,6 +86,14 @@ test('comparison can reopen an earlier attachment using the same authorized conv
   const comparison=nodes(render('new')).find(node=>node.props.className==='siv-comparison');
   assert.deepEqual(nodes(comparison).filter(node=>node.type==='img').map(node=>node.props.src),['blob:old','blob:new']);
   assert.deepEqual(seen,['old']);
+  nodes(render('new')).find(node=>node.children[0]==='Slider').props.onClick();
+  const wipe=()=>nodes(render('new')).find(node=>node.props.className==='siv-comparison siv-wipe');
+  const divider=nodes(wipe()).find(node=>node.type==='input');
+  assert.equal(divider.props['aria-label'],'Position of comparison divider');
+  divider.props.onChange({target:{value:'75'}});
+  assert.equal(nodes(wipe()).find(node=>node.type==='img'&&node.props.src==='blob:old').props.style.clipPath,'inset(0 25% 0 0)');
+  nodes(render('new')).find(node=>node.children[0]==='Side by side').props.onClick();
+  assert.equal(wipe(),undefined);
   state.length=0;
   nodes(render('other',async()=>assert.fail('pin escaped the conversation loader'))).find(node=>node.children[0]==='Compare').props.onClick();
   assert.equal(nodes(render('other')).find(node=>node.type==='figcaption').children[0],'Before');

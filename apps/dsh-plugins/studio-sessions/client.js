@@ -2,7 +2,7 @@
 window.__ModuleLoader__.load({id:'studio-sessions',factory(require){
   const {createElement:h,useState,useEffect,useRef,useSyncExternalStore}=require('react');
   const {createPortal}=require('react-dom');
-  const {Button}=require('@deepseek-ai/dsh-client-ui-primitives');
+  const {Button,Modal,MenuItemButton,IconClockOutlineRegular}=require('@deepseek-ai/dsh-client-ui-primitives');
     // Maintained client fragment, inserted by build-client.mjs; no direct entry point.
   const workspaceCatalog={"icons":{"image":"M3 3h18v18H3z M3 16l5-5 4 4 3-3 6 6 M16 7h.01","film":"M3 3h18v18H3z M7 3v18 M17 3v18 M3 8h4 M3 16h4 M17 8h4 M17 16h4","palette":"M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 1-3.7 1 1 0 0 1 1-1.7h2a4 4 0 0 0 4-4 8.7 8.7 0 0 0-9-8.6z M7 9h.01 M10 6h.01 M15 6h.01 M18 9h.01","star":"m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2-5.5-2.9-5.5 2.9 1-6.2L2 9.6l6.2-.9z","book":"M3 4h7l2 2 2-2h7v16h-7l-2 1-2-1H3z M12 6v15","code":"m8 7-5 5 5 5 M16 7l5 5-5 5 M14 4l-4 16","grid":"M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z","sparkles":"m12 3 2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z M20 2v4 M18 4h4"},"colors":["#64748b","#3b82f6","#14b8a6","#22c55e","#eab308","#f97316","#ef4444","#a855f7","#ec4899"],"uncategorized":"@uncategorized"};
   const WORKSPACE_PATH='/api/local-studio/workspace-visuals',WORKSPACE_INTENT='studio-sessions.workspace-intent.v1';
@@ -63,6 +63,10 @@ window.__ModuleLoader__.load({id:'studio-sessions',factory(require){
   const text=key=>en[key]??key;
   Object.assign(en,{queuedOnly:'Deletion queued',hideQueued:'Hide queued deletions',showQueued:'Show queued deletions',includeQueued:'Include queued deletions',sidebarFilter:'Session deletion filter',dismiss:'Close',cancelBatch:'Cancel deletion for all sessions in this reservation'});
   Object.assign(ja,{queuedOnly:'削除予約済み',hideQueued:'削除予約済みを隠す',showQueued:'削除予約済みを表示',includeQueued:'削除予約済みを含める',sidebarFilter:'削除予約の表示',dismiss:'閉じる',cancelBatch:'この予約に含まれる全セッションの削除を取り消す'});
+  Object.assign(en,{scheduleTitle:'Schedule session deletion?',scheduleExplanation:'This session will be deleted the next time this edition of DSH starts. You can cancel the reservation before then.',keepSession:'Keep session',cancelTitle:'Cancel scheduled deletion?',cancelExplanation:'The session will return to the session list.',goBack:'Go back',working:'Working…'});
+  Object.assign(ja,{scheduleTitle:'このセッションの削除を予約しますか？',scheduleExplanation:'このセッションは、現在使っているDSHを次に起動したときに削除されます。それまでは予約を取り消せます。',keepSession:'セッションを残す',cancelTitle:'削除予約を取り消しますか？',cancelExplanation:'セッションは通常の一覧に戻ります。',goBack:'戻る',working:'処理中…'});
+  en.batchExplanation='The selected sessions will be deleted the next time this edition of DSH starts. You can cancel the reservation before then.';
+  ja.batchExplanation='選んだセッションは、現在使っているDSHを次に起動したときに削除されます。それまでは予約を取り消せます。';
   const css=`.studio-sessions{color:var(--dsw-alias-label-primary);font:inherit;min-width:0}.studio-sessions *{box-sizing:border-box}.sl-head,.sl-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.sl-head h2{font-size:18px;margin:0}.sl-muted{font-size:12px;line-height:1.65;color:var(--dsw-alias-label-secondary)}.sl-filters{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin:18px 0}.sl-filters label{display:grid;gap:5px;font-size:12px}.sl-filters input,.sl-filters select{min-width:0;width:100%;padding:9px 11px;border:1px solid var(--dsw-alias-border-l2);border-radius:9px;background:var(--dsw-alias-bg-layer-2);color:inherit;font:inherit}.sl-check{display:flex!important;align-items:center;gap:8px}.sl-check input{width:auto}.sl-toolbar{justify-content:flex-start;margin:12px 0}.sl-list{border:1px solid var(--dsw-alias-border-l1);border-radius:12px;overflow:hidden}.sl-row{display:flex;align-items:flex-start;gap:10px;padding:12px;border-bottom:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1)}.sl-row:last-child{border:0}.sl-row input{margin-top:4px;accent-color:var(--dsw-alias-state-business-primary)}.sl-row-body{flex:1;min-width:0}.sl-row strong{font-size:13px;line-height:1.5;font-weight:600;display:block;overflow-wrap:anywhere}.sl-row small{font-size:10px;display:block;color:var(--dsw-alias-label-secondary);overflow-wrap:anywhere}.sl-badge{display:inline-block;border:1px solid var(--dsw-alias-border-l1);border-radius:999px;padding:2px 7px;font-size:10px;white-space:nowrap;color:var(--dsw-alias-label-secondary)}.sl-notice,.sl-preview,.sl-receipt{margin:14px 0;padding:13px;border:1px solid var(--dsw-alias-border-l2);border-radius:12px;background:var(--dsw-alias-bg-layer-2);overflow-wrap:anywhere}.sl-preview h3,.sl-receipt h3{font-size:14px;margin:0 0 8px}.sl-preview ul{padding-left:20px;max-height:230px;overflow:auto;font-size:12px}.sl-preview li{margin:8px 0}.sl-preview small{display:block;color:var(--dsw-alias-label-secondary);overflow-wrap:anywhere}.sl-receipt-list{display:grid;gap:8px;margin-top:18px}.sl-receipt{margin:0}.sl-receipt summary{font-size:12px;cursor:pointer}.sl-danger{color:var(--dsw-alias-state-error-primary)!important}@media(max-width:600px){.sl-filters{grid-template-columns:minmax(0,1fr)}.sl-badge{white-space:normal}}`;
   function rowsFor(sessions,workspaces,library,{query='',scope='all',before='',blank=false,includeQueued=true}={}){
     const assigned=new Map((workspaces.items??[]).flatMap(w=>w.sessionIds.map(id=>[id,w.workspaceId]))),archived=new Set(workspaces.archivedSessionIds??[]),metadata=new Map((library?.sessions??[]).map(s=>[s.sessionId,s])),needle=query.trim().toLowerCase();
@@ -96,36 +100,72 @@ window.__ModuleLoader__.load({id:'studio-sessions',factory(require){
     return {snapshot:()=>snapshot,subscribe(fn){listeners.add(fn);return()=>listeners.delete(fn);},refresh,open,dispose(){disposed=true;listeners.clear();}};
   }
   function ReservationDialog({owner,target,value,t}){
-    const dialog=useRef(null),started=useRef(false);
+    const started=useRef(false);
     const [preview,setPreview]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
-    useEffect(()=>{const node=dialog.current;node?.showModal();if(!target.requestId){const abort=new AbortController();void request({action:'preview',sessionIds:[target.sessionId]},abort.signal).then(setPreview).catch(e=>{if(!abort.signal.aborted)setError(e.message);});return()=>{abort.abort();node?.close();};}return()=>node?.close();},[target]);
+    useEffect(()=>{
+      if(target.requestId)return;
+      const abort=new AbortController();
+      void request({action:'preview',sessionIds:[target.sessionId]},abort.signal).then(setPreview).catch(e=>{if(!abort.signal.aborted)setError(e.message);});
+      return()=>abort.abort();
+    },[target]);
     async function confirm(){
       if(started.current||(!preview&&!target.requestId))return;started.current=true;setBusy(true);
       const body=target.requestId?{action:'cancel',requestId:target.requestId}:{action:'schedule',previewId:preview.previewId,requestId:window.crypto.randomUUID()};
       try{await request(body,AbortSignal.timeout(20000));window.dispatchEvent(new Event(changedEvent));owner.open(null);}
       catch(e){setError(e.message);await owner.refresh();if(e.definite)started.current=false;}finally{setBusy(false);}
     }
-    return createPortal(h('dialog',{ref:dialog,'aria-modal':true,className:'sl-preview sl-side-dialog',onCancel:e=>{e.preventDefault();if(!busy)owner.open(null);}},h('h3',null,t(target.requestId?'cancel':'preview')),h('p',null,target.displayTitle||target.sessionId),target.requestId?h('p',{className:'sl-muted'},target.count>1?`${t('cancelBatch')} (${target.count})`:t('reservation')):h('p',{className:'sl-muted'},preview?`${t(value?.startup?(isDesktop()?'desktopNotice':'notice'):'desktopLegacyNotice')} ${t('preserved')}`:error?'':t('loading')),error?h('p',{role:'alert'},error):null,h('div',{className:'sl-toolbar'},h(Button,{type:'button',size:'sm',disabled:busy||started.current||!preview&&!target.requestId,onClick:()=>void confirm()},t(target.requestId?'cancel':'confirm')),h(Button,{type:'button',size:'sm',disabled:busy,onClick:()=>owner.open(null)},t('dismiss')))),document.body);
+    const cancelling=Boolean(target.requestId),close=()=>{if(!busy)owner.open(null);};
+    return h(Modal,{open:true,title:t(cancelling?'cancelTitle':'scheduleTitle'),closeLabel:t('dismiss'),onClose:close,tone:cancelling?undefined:'warning',
+      description:t(cancelling?'cancelExplanation':value?.startup?'scheduleExplanation':'desktopLegacyNotice'),
+      footer:h('div',{className:'sl-dialog-actions'},
+        h(Button,{type:'button',variant:'outline','data-modal-autofocus':true,disabled:busy,onClick:close},t(cancelling?'goBack':'keepSession')),
+        h(Button,{type:'button',variant:cancelling?'primary':'outline',className:cancelling?undefined:'sl-danger',disabled:busy||started.current||!preview&&!cancelling,onClick:()=>void confirm()},t(busy?'working':cancelling?'cancel':'confirm')))},
+      h('strong',{className:'sl-dialog-session'},target.displayTitle||target.sessionId),
+      cancelling&&target.count>1?h('p',{className:'sl-muted'},`${t('cancelBatch')} (${target.count})`):null,
+      !cancelling?h('p',{className:'sl-muted'},t(preview?'preserved':'loading')):null,
+      error?h('p',{role:'alert',className:'sl-danger'},error):null);
   }
-  function SidebarReservations({owner,sessions,t=text}){
+  const sidebarCss=`
+    [data-sidebar-workspace-header]:has(>.sl-sidebar-queued){height:auto;min-height:var(--workspace-toolbar-height);flex-wrap:wrap;overflow:visible}
+    .sl-sidebar-queued{flex:0 0 100%;min-width:0;padding:2px 4px 0;color:var(--dsw-alias-label-secondary);font-size:12px}
+    .sl-sidebar-queued summary,.sl-sidebar-reservation{display:flex;align-items:center;gap:8px;min-height:26px;padding:3px 6px;border-radius:var(--dsw-radius-md,8px)}
+    .sl-sidebar-queued summary{cursor:pointer}.sl-sidebar-queued summary::-webkit-details-marker{display:none}
+    .sl-sidebar-queued summary:is(:hover,:focus-visible),.sl-sidebar-reservation:hover{background:var(--dsw-alias-interactive-bg-hover)}
+    .sl-sidebar-queued summary span:last-child{margin-inline-start:auto;font-variant-numeric:tabular-nums}
+    .sl-sidebar-reservation{justify-content:space-between;padding-inline-start:26px}.sl-sidebar-reservation>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .sl-dialog-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}.sl-dialog-session{overflow-wrap:anywhere}
+    .sl-dialog-sessions{max-height:12rem;overflow:auto;padding-inline-start:20px;overflow-wrap:anywhere}
+    .sl-filter-heading{padding:5px 8px;color:var(--dsw-alias-label-tertiary);font-size:11px;border-top:1px solid var(--dsw-alias-border-l1);margin-top:4px}
+  `;
+  function workspaceOptions(doc,nativeViewOptions){
+    const header=doc.querySelector('[data-sidebar-workspace-header]');
+    const label=nativeViewOptions();
+    const trigger=[...(header?.querySelectorAll('button[aria-label]')??[])].find(button=>[label,'表示オプション','View options','视图选项'].includes(button.getAttribute('aria-label')));
+    const anchor=trigger?.closest('[style*="anchor-name:"]')?.style.anchorName;
+    const menu=anchor&&[...doc.querySelectorAll('[role="menu"][data-anchor-align]')].find(surface=>surface.style.positionAnchor===anchor);
+    return {header,trigger,menu:menu?.querySelector(':scope > [role="presentation"]')??null};
+  }
+  function SidebarReservations({owner,sessions,nativeViewOptions,t=text}){
     const {value,target}=useSyncExternalStore(owner.subscribe,owner.snapshot,owner.snapshot);
     const list=useSyncExternalStore(fn=>sessions.list.subscribe(fn),()=>sessions.list.getSnapshot(),()=>sessions.list.getSnapshot());
     const [visible,setVisible]=useState(()=>{try{return window.localStorage.getItem('studio-sessions.sidebar-queued')!=='hidden';}catch{return true;}});
-    const [header,setHeader]=useState(null);
+    const [seats,setSeats]=useState({});
     useEffect(()=>{
-      const update=()=>setHeader(document.querySelector('[data-sidebar-workspace-header]'));
-      const observer=new MutationObserver(update);observer.observe(document.body,{childList:true,subtree:true});update();return()=>observer.disconnect();
-    },[]);
+      const update=()=>{const next=workspaceOptions(document,nativeViewOptions);setSeats(old=>old.header===next.header&&old.trigger===next.trigger&&old.menu===next.menu?old:next);};
+      const observer=new MutationObserver(update);observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['aria-label']});update();return()=>observer.disconnect();
+    },[nativeViewOptions]);
     const queued=(value?.sessions??[]).filter(row=>row.pending&&/^[A-Za-z0-9_-]{1,220}$/.test(row.sessionId)&&list.byId?.[row.sessionId]);
     const hide=queued.map(({sessionId})=>`[data-slot="sidebar.workspaces"] [data-row-key="session:${sessionId}"]`).join(',');
-    const filter=header&&queued.length?createPortal(h('div',{className:'sl-sidebar-queued'},
-      h('label',null,h('span',null,t('sidebarFilter')),h('select',{value:visible?'show':'hide','aria-label':t('sidebarFilter'),onChange:e=>{const next=e.target.value==='show';setVisible(next);try{window.localStorage.setItem('studio-sessions.sidebar-queued',next?'shown':'hidden');}catch{}}},h('option',{value:'show'},t('showQueued')),h('option',{value:'hide'},t('hideQueued')))),
-      visible?h('details',null,h('summary',null,`${t('queuedOnly')} (${queued.length})`),...queued.map(({sessionId})=>{
+    const changeVisibility=next=>{setVisible(next);try{window.localStorage.setItem('studio-sessions.sidebar-queued',next?'shown':'hidden');}catch{}};
+    const filter=seats.menu?createPortal(h('div',null,h('div',{className:'sl-filter-heading'},t('queuedOnly')),
+      ...[true,false].map(show=>h(MenuItemButton,{key:String(show),current:show===visible,onSelect:()=>{changeVisibility(show);seats.trigger?.click();}},t(show?'showQueued':'hideQueued')))),seats.menu):null;
+    const category=seats.header&&queued.length&&visible?createPortal(h('div',{className:'sl-sidebar-queued'},
+      h('details',null,h('summary',null,h(IconClockOutlineRegular,{size:15,'aria-hidden':true}),h('span',null,t('queuedOnly')),h('span',null,queued.length)),...queued.map(({sessionId})=>{
         const entry=list.byId[sessionId],displayTitle=entry.title??entry.projectionValues?.title??entry.displayTitle??sessionId;
         const pending=value.requests.find(r=>r.state==='pending'&&r.sessionIds.includes(sessionId));
         return h('div',{key:sessionId,className:'sl-sidebar-reservation'},h('span',{title:displayTitle},displayTitle),pending?h(Button,{type:'button',variant:'ghost',size:'sm',onClick:()=>owner.open({sessionId,displayTitle,requestId:pending.id,count:pending.sessionIds.length})},t('cancel')):null);
-      })):null),header):null;
-    return h('span',{style:{display:'contents'}},h('style',null,`${hide?hide+'{display:none!important}':''} [data-sidebar-workspace-header]:has(>.sl-sidebar-queued){height:auto;min-height:var(--workspace-toolbar-height);flex-wrap:wrap;overflow:visible}.sl-sidebar-queued{flex-basis:100%;min-width:0;font-size:11px;padding:4px 0}.sl-sidebar-queued label,.sl-sidebar-reservation{display:flex;align-items:center;justify-content:space-between;gap:4px}.sl-sidebar-queued select{max-width:100%;color:inherit;background:var(--dsw-alias-bg-layer-2)}.sl-sidebar-reservation span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sl-side-dialog{color:var(--dsw-alias-label-primary);max-width:min(480px,85vw);padding:16px}.sl-side-dialog::backdrop{background:#0008}.sl-reserve-item{width:100%;padding:7px 10px;border:0;border-radius:6px;text-align:start;color:var(--dsw-alias-state-error-primary);background:none}.sl-reserve-item:is(:hover,:focus-visible){background:var(--dsw-alias-interactive-bg-hover)}`+css),filter,target?h(ReservationDialog,{key:target.sessionId,owner,target,value,t}):null);
+      }))),seats.header):null;
+    return h('span',{style:{display:'contents'}},h('style',null,(hide?hide+'{display:none!important}':'')+sidebarCss+css),filter,category,target?h(ReservationDialog,{key:target.sessionId,owner,target,value,t}):null);
   }
   function Library({sessions,workspaces,workspaceController,renderSlot,t=text}){
     const list=useSyncExternalStore(fn=>sessions.list.subscribe(fn),()=>sessions.list.getSnapshot(),()=>sessions.list.getSnapshot()),groups=useSyncExternalStore(fn=>workspaces.list.subscribe(fn),()=>workspaces.list.getSnapshot(),()=>workspaces.list.getSnapshot());
@@ -147,7 +187,13 @@ window.__ModuleLoader__.load({id:'studio-sessions',factory(require){
       h('div',{className:'sl-toolbar'},h(Button,{type:'button',variant:'outline',size:'sm',disabled:busy||uncertain||!library,onClick:()=>{setSelected(rows.filter(r=>!reason(r)).map(r=>r.sessionId));setPreview(null);}},t('select')),h(Button,{type:'button',variant:'outline',size:'sm',disabled:busy,onClick:()=>{setSelected([]);setPreview(null);}},t('clear')),h('span',{className:'sl-muted'},`${selected.length} ${t('selected')}`),h(Button,{type:'button',variant:'outline',size:'sm',className:'sl-danger',disabled:busy||uncertain||!selectedRows.length,onClick:()=>void act({action:'preview',sessionIds:selectedRows.map(r=>r.sessionId)})},t('review'))),
       !library?h('p',{className:'sl-muted'},t('loading')):null,error?h('p',{className:'sl-notice',role:'alert'},error):null,message?h('p',{className:'sl-notice',role:'status'},message):null,
       uncertain?h('div',{className:'sl-notice',role:'status'},h('p',{className:'sl-muted'},'予約の受付が未確認です。再読込で確認し、自動再送はしません。'),intent?h(Button,{type:'button',variant:'outline',size:'sm',disabled:busy,onClick:()=>void act(intent)},t('retry')):null):null,
-      preview?h('section',{className:'sl-preview','aria-label':'Confirm session deletion'},h('h3',null,`${t('preview')} · ${preview.count}`),h('p',{className:'sl-muted'},`${(preview.bytes/1048576).toFixed(2)} MiB`),h('ul',null,...preview.titles.map(row=>h('li',{key:row.id},row.title,h('small',null,row.id)))),h('p',{className:'sl-muted'},t('preserved')),h(Button,{type:'button',variant:'outline',size:'sm',className:'sl-danger',disabled:busy||uncertain,onClick:reserve},t('confirm'))):null,
+      preview?h(Modal,{open:true,title:`${t('preview')} (${preview.count})`,closeLabel:t('dismiss'),tone:'warning',
+        description:t(library?.startup?'batchExplanation':'desktopLegacyNotice'),onClose:()=>{if(!busy)setPreview(null);},
+        footer:h('div',{className:'sl-dialog-actions'},
+          h(Button,{type:'button',variant:'outline','data-modal-autofocus':true,disabled:busy,onClick:()=>setPreview(null)},t('keepSession')),
+          h(Button,{type:'button',variant:'outline',className:'sl-danger',disabled:busy||uncertain,onClick:reserve},t(busy?'working':'confirm')))},
+        h('ul',{className:'sl-dialog-sessions'},...preview.titles.map(row=>h('li',{key:row.id},row.title))),
+        h('p',{className:'sl-muted'},t('preserved')),error?h('p',{className:'sl-danger',role:'alert'},error):null):null,
       h('div',{className:'sl-list'},...rows.map(row=>h('label',{key:row.sessionId,className:'sl-row'},h('input',{type:'checkbox','aria-label':`Select ${row.sessionId}`,checked:selected.includes(row.sessionId),disabled:busy||uncertain||Boolean(reason(row)),onChange:e=>{setSelected(ids=>e.target.checked?[...ids,row.sessionId]:ids.filter(id=>id!==row.sessionId));setPreview(null);}}),h('span',{className:'sl-row-body'},h('strong',null,row.title),h('small',null,row.sessionId),h('small',null,`${t('date')} · ${new Date(row.updatedAt).toLocaleString()}`)),reason(row)?h('span',{className:'sl-badge'},t(reason(row))):null))),!rows.length?h('p',{className:'sl-muted'},t('empty')):null,
       library?.requests?.length?h('section',{className:'sl-receipt-list','aria-label':'Deletion reservations'},h('h3',null,t('reservation')),...library.requests.slice().reverse().map(r=>h('details',{key:r.id,className:'sl-receipt',open:r.state==='pending'},h('summary',null,`${status(r.state)} · ${r.count} · ${new Date(r.requestedAt).toLocaleString()}`),h('ul',{className:'sl-muted'},...r.results.map(s=>h('li',{key:s.sessionId},s.sessionId,s.error?h('span',null,' · '+s.error):null))),r.state==='pending'?h(Button,{type:'button',variant:'outline',size:'sm',disabled:busy||uncertain,onClick:()=>void act({action:'cancel',requestId:r.id})},t('cancel')):null))):null),
       typeof renderSlot==='function'?renderSlot('studio.sessions.sections',{activeSection:section}):null);
@@ -162,9 +208,10 @@ window.__ModuleLoader__.load({id:'studio-sessions',factory(require){
       const [,close]=useMenuOpenState();
       const {value}=useSyncExternalStore(owner.subscribe,owner.snapshot,owner.snapshot);
       const pending=value?.requests?.find(r=>r.state==='pending'&&r.sessionIds.includes(sessionId));
-      return h('button',{type:'button',role:'menuitem',className:'sl-reserve-item',onClick:()=>{close(false);owner.open({sessionId,displayTitle,requestId:pending?.id,count:pending?.sessionIds.length});}},t(pending?'cancel':'confirm'));
+      return h(MenuItemButton,{danger:!pending,onSelect:()=>{close(false);owner.open({sessionId,displayTitle,requestId:pending?.id,count:pending?.sessionIds.length});}},t(pending?'cancel':'confirm'));
     }));
-    ctx.slots.inject('sidebar.footer.action',()=>ctx.slots.register({name:'sidebar.footer.action',id:'studio-session-reservation-panel',locale:'studio.sessions',inject:()=>({sessions:ctx.sessions,owner})},SidebarReservations));
+    const nativeViewOptions=()=>ctx.locale.bind('workspace')('viewOptions.label');
+    ctx.slots.inject('sidebar.footer.action',()=>ctx.slots.register({name:'sidebar.footer.action',id:'studio-session-reservation-panel',locale:'studio.sessions',inject:()=>({sessions:ctx.sessions,owner,nativeViewOptions})},SidebarReservations));
     ctx.slots.inject('settings.section',()=>ctx.slots.register({name:'settings.section',id:'studio-sessions',order:35,label:()=>ctx.locale.bind('studio.sessions')('title'),locale:'studio.sessions',children:{'studio.sessions.workspace.fields':{kind:'list',scope:'root'},'studio.sessions.sections':{kind:'list',scope:'root'}},inject:()=>({sessions:ctx.sessions,workspaces:ctx.workspaces,workspaceController})},Library));
   }
   return {inject:['slots','locale','sessions','workspaces'],apply,Library,rowsFor,reason,request,en,ja,createWorkspaceController,workspaceStyleText,workspaceIconUrl,WorkspaceGlyph,WorkspacePanel,workspaceCatalog,installWorkspacePresentation};
