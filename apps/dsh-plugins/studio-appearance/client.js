@@ -201,6 +201,85 @@ window.__ModuleLoader__.load({
       return {snapshot,subscribe(fn){listeners.add(fn);return()=>listeners.delete(fn);},setOpacity:apply,setModal,retry:initialize,dispose(){alive=false;listeners.clear();}};
     }
 
+    function coordinatesForSettingsMenu(anchor, menu, viewport, align){
+      const gutter=12,gap=4;
+      const above=Math.max(0,anchor.top-gap-gutter);
+      const below=Math.max(0,viewport.height-gutter-anchor.bottom-gap);
+      const opensAbove=menu.height>below&&above>below;
+      const maxHeight=Math.max(0,opensAbove?above:below);
+      const height=Math.min(menu.height,maxHeight);
+      const horizontal=align==='end'?anchor.right-menu.width:anchor.left;
+      return {
+        top:opensAbove?anchor.top-gap-height:anchor.bottom+gap,
+        left:Math.max(gutter,Math.min(horizontal,viewport.width-gutter-menu.width)),
+        maxHeight,
+      };
+    }
+
+    // Keep the native Menu, focus and preference callbacks. Only position its
+    // General-settings portals on Web, where CSS anchor layout varies by browser.
+    function installSettingsMenuPositioning(doc,view){
+      const dialogSelector='[data-shortcut-modal="settings"]';
+      const triggerSelector='[data-slot="settings.general.item"] button[aria-haspopup="menu"][aria-expanded="true"]';
+      const menuSelector='body > [role="menu"][data-anchor-side="bottom"][data-anchor-align]:not([data-context-menu])';
+      const attribute='data-studio-settings-menu';
+      const stylesheet=doc.createElement('style');
+      stylesheet.setAttribute('data-studio-settings-menu-style','');
+      stylesheet.textContent=`
+body > [data-studio-settings-menu]{
+  position-anchor:none!important;
+  position-try-fallbacks:none!important;
+  position-visibility:always;
+  inset:var(--studio-settings-menu-top,12px) auto auto var(--studio-settings-menu-left,12px)!important;
+  max-height:var(--studio-settings-menu-max-height,calc(100dvh - 24px))!important;
+}
+`;
+      doc.head.append(stylesheet);
+      let dialog=null,positioned=null,frame=null;
+      const sync=()=>{
+        frame=null;
+        const nextDialog=doc.querySelector(dialogSelector);
+        if(dialog!==nextDialog){
+          expanded.disconnect();dialog=nextDialog;
+          if(dialog)expanded.observe(dialog,{subtree:true,attributes:true,attributeFilter:['aria-expanded']});
+        }
+        const triggers=dialog?.querySelectorAll(triggerSelector);
+        const trigger=triggers?.length===1?triggers[0]:null;
+        const menus=trigger?[...doc.querySelectorAll(menuSelector)]:[];
+        const anchorName=trigger?.parentElement?.style.getPropertyValue('anchor-name');
+        const menuName=menu=>menu.style.getPropertyValue('position-anchor');
+        const menu=menus.find(item=>anchorName&&menuName(item)===anchorName)
+          ??(menus.length===1&&(!anchorName||!menuName(menus[0]))?menus[0]:null);
+        if(menu!==positioned){clearPosition();positioned=menu;}
+        if(!menu)return;
+        menu.setAttribute(attribute,'');
+        const box=menu.getBoundingClientRect(),anchor=trigger.getBoundingClientRect();
+        const list=menu.querySelector(':scope > [role="presentation"]');
+        const height=box.height+(list?Math.max(0,list.scrollHeight-list.clientHeight):0);
+        const viewport={width:doc.documentElement.clientWidth,height:doc.documentElement.clientHeight};
+        const coordinates=coordinatesForSettingsMenu(anchor,{width:box.width,height},viewport,menu.dataset.anchorAlign);
+        menu.style.setProperty('--studio-settings-menu-top',coordinates.top+'px');
+        menu.style.setProperty('--studio-settings-menu-left',coordinates.left+'px');
+        menu.style.setProperty('--studio-settings-menu-max-height',coordinates.maxHeight+'px');
+      };
+      function clearPosition(){
+        positioned?.removeAttribute(attribute);
+        for(const key of ['top','left','max-height'])positioned?.style.removeProperty(`--studio-settings-menu-${key}`);
+      }
+      function schedule(){frame??=view.requestAnimationFrame(sync);}
+      const expanded=new view.MutationObserver(schedule),portals=new view.MutationObserver(schedule);
+      portals.observe(doc.body,{childList:true});
+      const move=()=>{if(positioned)schedule();};
+      doc.addEventListener('scroll',move,true);
+      view.addEventListener('resize',move);
+      schedule();
+      return()=>{
+        if(frame!==null)view.cancelAnimationFrame(frame);
+        expanded.disconnect();portals.disconnect();clearPosition();stylesheet.remove();
+        doc.removeEventListener('scroll',move,true);view.removeEventListener('resize',move);
+      };
+    }
+
     function SettingsLauncher({openSettings,settingsOpen,settingsShortcut,wide,t}){
       return React.createElement(Button,{
         type:'button',variant:'ghost',size:'sm',className:'studio-settings-launcher',onClick:()=>openSettings(),
@@ -334,6 +413,7 @@ window.__ModuleLoader__.load({
       const controller=createController({theme:ctx.theme,storage,indexedDB,doc:document,urlApi:URL,decode:window.createImageBitmap?.bind(window)});
       const windowOpacity=createWindowOpacityController({desktop:window.location?.protocol==='dsh-app:'&&window.location?.host==='app',storage,fetchImpl:window.fetch.bind(window)});
       ctx.effect(()=>()=>controller.dispose());
+      if(['http:','https:'].includes(window.location.protocol))ctx.effect(()=>installSettingsMenuPositioning(document,window));
       ctx.effect(()=>()=>windowOpacity.dispose());
       if(windowOpacity.snapshot().desktop)ctx.effect(()=>{
         const update=()=>windowOpacity.setModal([...document.querySelectorAll('[role="dialog"][aria-modal="true"],dialog[open]')].some(element=>element.getClientRects().length&&!element.closest('[hidden],[aria-hidden="true"]')));
@@ -366,6 +446,6 @@ window.__ModuleLoader__.load({
       });
       ctx.slots.inject('settings.general.item',()=>ctx.slots.register({name:'settings.general.item',id:'studio-appearance',order:12,locale:'studio.appearance',inject:()=>({controller,windowOpacity,settingsLauncherAvailable:ctx.slots.spec(SETTINGS_LAUNCHER)?.kind==='single'})},Appearance));
     }
-    return {inject:['slots','theme','locale'],apply,Appearance,SettingsLauncher,normalize,accentOverrides,contrastColor,validateImage,createController,createWindowOpacityController,imageStore,en,ja,localizedText};
+    return {inject:['slots','theme','locale'],apply,Appearance,SettingsLauncher,coordinatesForSettingsMenu,installSettingsMenuPositioning,normalize,accentOverrides,contrastColor,validateImage,createController,createWindowOpacityController,imageStore,en,ja,localizedText};
   },
 });

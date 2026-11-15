@@ -228,3 +228,48 @@ test('browser-storage failures keep their concise localized error',()=>{
   }
   controller.dispose();
 });
+
+test('Web General settings menu opens beside its trigger and stays inside the viewport',()=>{
+  const {coordinatesForSettingsMenu:position}=appearance();
+  const viewport={width:400,height:420},size={width:144,height:140};
+  assert.deepEqual({...position({left:210,right:312,top:79,bottom:113},size,viewport,'end')},
+    {top:117,left:168,maxHeight:291});
+  assert.deepEqual({...position({left:344,right:380,top:351,bottom:385},size,viewport,'start')},
+    {top:207,left:244,maxHeight:335});
+  assert.deepEqual({...position({left:4,right:57,top:188,bottom:212},{width:144,height:600},viewport,'end')},
+    {top:216,left:12,maxHeight:192});
+});
+
+test('Web settings menu positioning follows only an open settings trigger and cleans up',()=>{
+  const {installSettingsMenuPositioning:install}=appearance();
+  const observers=[],frames=new Map(),listeners=new Map();let serial=0,matching=true,active=true,dialogOpen=true;
+  class Observer{constructor(callback){this.callback=callback;observers.push(this);}observe(){} disconnect(){}}
+  const view={MutationObserver:Observer,requestAnimationFrame(fn){frames.set(++serial,fn);return serial;},cancelAnimationFrame(id){frames.delete(id);},
+    addEventListener(name,fn){listeners.set(name,fn);},removeEventListener(name){listeners.delete(name);}};
+  const flush=()=>{for(const [id,fn] of [...frames]){frames.delete(id);fn();}};
+  const attrs=new Set(),values=new Map();
+  let triggerBox={top:370,bottom:405,left:300,right:395};
+  const trigger={getBoundingClientRect:()=>triggerBox,parentElement:{style:{getPropertyValue:()=>matching?'--general':''}}};
+  const menu={getBoundingClientRect:()=>({width:144,height:140}),dataset:{anchorAlign:'end'},
+    style:{getPropertyValue:()=>matching?'--general':'',setProperty:(key,val)=>values.set(key,val),removeProperty:key=>values.delete(key)},
+    querySelector:()=>null,setAttribute:key=>attrs.add(key),removeAttribute:key=>attrs.delete(key)};
+  const dialog={querySelectorAll:()=>active?[trigger]:[]};
+  let attachedStyle;
+  const doc={body:{},head:{append(style){attachedStyle=style;}},createElement:()=>({setAttribute(){},remove(){attachedStyle=null;}}),
+    documentElement:{clientWidth:440,clientHeight:450},querySelector:()=>dialogOpen?dialog:null,querySelectorAll:()=>[menu],
+    addEventListener:view.addEventListener,removeEventListener:view.removeEventListener};
+  const dispose=install(doc,view);flush();
+  assert.equal(attrs.has('data-studio-settings-menu'),true);
+  assert.equal(values.get('--studio-settings-menu-top'),'226px');
+  triggerBox={top:100,bottom:130,left:300,right:395};
+  listeners.get('scroll')();flush();
+  assert.equal(values.get('--studio-settings-menu-top'),'134px');
+  matching=false;observers[0].callback();flush();
+  assert.equal(attrs.has('data-studio-settings-menu'),true,'a single menu can be matched without CSS anchor support');
+  active=false;observers[0].callback();flush();
+  assert.equal(attrs.size,0);assert.equal(values.size,0);
+  active=true;dialogOpen=false;observers[1].callback();flush();
+  assert.equal(attrs.size,0);
+  assert.match(attachedStyle.textContent,/position-anchor:none!important/);
+  dispose();assert.equal(listeners.size,0);assert.equal(attachedStyle,null);
+});

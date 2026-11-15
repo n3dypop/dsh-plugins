@@ -45,3 +45,7 @@ replaying a new operation automatically.
 Font selection uses DSH's own settings. The Appearance plugin neither writes
 those settings nor supplies fonts. Saved text/code/terminal font choices stay
 unchanged when upgrading from a version with the duplicate font controls.
+
+On Web, Appearance places General settings dropdowns beside their triggers
+without relying on CSS anchor layout inside the settings scroll area. The menus
+continue to use DSH's selection, keyboard, and persistence behavior.
