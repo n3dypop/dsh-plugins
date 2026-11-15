@@ -74,15 +74,15 @@ The plugins add their controls to native Settings. Select Japanese in DSH under
 accent and wallpaper or enable **Show only Settings in the sidebar footer**.
 Turning it off restores the account menu. Windows Desktop also supports window
 opacity in the same section. While a modal is open, the window is opaque.
-Choose a wallpaper, select its ratio, and click the area you want to keep.
-Use the zoom control or move the crop center with the arrow keys.
-Choose a neutral palette, edit the new-session heading, or collapse the extra
-sidebar entries from the same settings page.
+Choose an image to use it directly as the wallpaper. Set its area, fit,
+position and opacity. Entire-window wallpapers also show through the docked
+right-pane tab strip. Edit the native new-session heading and badge or
+collapse the extra sidebar entries from the same settings page.
 
 Click an image attachment to open the viewer. To compare two results across
 messages, open the older image and choose **Use as Before**, then open the newer
-image in the same conversation and choose **Compare**. Use **Side by side**
-or **Slider** to inspect the two images. You can also select another attachment
+image in the same conversation and choose **Compare**. In **Comparison mode**,
+select **Side by side** or **Slider**. You can also select another attachment
 in the same image group or open a local image for comparison.
 
 **Session Library** supports filtering, selection and workspace appearance.

@@ -6,7 +6,7 @@ import {runInNewContext} from 'node:vm';
 const source=await readFile(new URL('../apps/dsh-plugins/studio-image-viewer/client.js',import.meta.url),'utf8');
 function viewer(react){
   let entry;runInNewContext(source,{window:{__ModuleLoader__:{load(value){entry=value;}}},document:{body:{}}});
-  return entry.factory(id=>id==='react'?(react??{createElement(){},useState(){},useEffect(){},useRef(){},useCallback(){}}):id==='react-dom'?{createPortal:value=>value}:{});
+  return entry.factory(id=>id==='react'?(react??{createElement(){},useState(){},useEffect(){},useRef(){},useCallback(){},useId(){}}):id==='react-dom'?{createPortal:value=>value}:{});
 }
 const translate=(dictionaries,language)=>(key,params)=>{let text=dictionaries[language][key]??key;for(const [name,value]of Object.entries(params??{}))text=text.replace('{'+name+'}',value);return text;};
 
@@ -56,7 +56,7 @@ test('an explicit local image preview does not read the saved attachment',async(
 
 test('rendered ARIA and image error copy follow the viewer locale while action identities stay stable',()=>{
   const state=[];let cursor=0;
-  const api=viewer({createElement(type,props,...children){return{type,props:props??{},children};},useState(initial){const index=cursor++;if(!(index in state))state[index]=typeof initial==='function'?initial():initial;return[state[index],value=>{state[index]=typeof value==='function'?value(state[index]):value;}];},useRef(value){return{current:value};},useEffect(){},useCallback:fn=>fn});
+  const api=viewer({createElement(type,props,...children){return{type,props:props??{},children};},useState(initial){const index=cursor++;if(!(index in state))state[index]=typeof initial==='function'?initial():initial;return[state[index],value=>{state[index]=typeof value==='function'?value(state[index]):value;}];},useRef(value){return{current:value};},useEffect(){},useCallback:fn=>fn,useId:()=>'fixture-mode'});
   function render(labels){cursor=0;return api.ImageViewer({src:'blob:owned-fixture',alt:'Portrait',labels,onClose(){}});}
   function nodes(tree){return tree&&typeof tree==='object'?[tree,...tree.children.flatMap(nodes)]:[];}
   const en=api.labelsFor({t:translate(api.dictionaries,'en')}).lightbox;
@@ -72,7 +72,7 @@ test('rendered ARIA and image error copy follow the viewer locale while action i
 
 test('comparison can reopen an earlier attachment using the same authorized conversation loader',async()=>{
   const state=[];let cursor=0;
-  const api=viewer({createElement(type,props,...children){return{type,props:props??{},children};},useState(initial){const index=cursor++;if(!(index in state))state[index]=typeof initial==='function'?initial():initial;return[state[index],value=>{state[index]=value;}];},useRef(value){return{current:value};},useEffect(){},useCallback:fn=>fn});
+  const api=viewer({createElement(type,props,...children){return{type,props:props??{},children};},useState(initial){const index=cursor++;if(!(index in state))state[index]=typeof initial==='function'?initial():initial;return[state[index],value=>{state[index]=value;}];},useRef(value){return{current:value};},useEffect(){},useCallback:fn=>fn,useId:()=>'fixture-mode'});
   const seen=[],loader=async attachment=>{seen.push(attachment.attachmentId);return 'blob:old';};
   const render=(id,loadImage=loader)=>{
     cursor=0;
@@ -86,13 +86,17 @@ test('comparison can reopen an earlier attachment using the same authorized conv
   const comparison=nodes(render('new')).find(node=>node.props.className==='siv-comparison');
   assert.deepEqual(nodes(comparison).filter(node=>node.type==='img').map(node=>node.props.src),['blob:old','blob:new']);
   assert.deepEqual(seen,['old']);
-  nodes(render('new')).find(node=>node.children[0]==='Slider').props.onClick();
+  const modes=()=>nodes(render('new')).filter(node=>node.type==='input'&&node.props.type==='radio');
+  assert.deepEqual(modes().map(node=>[node.props.value,node.props.checked]),[['side',true],['wipe',false]]);
+  assert.equal(modes()[0].props.name,modes()[1].props.name);
+  modes()[1].props.onChange();
+  assert.deepEqual(modes().map(node=>node.props.checked),[false,true]);
   const wipe=()=>nodes(render('new')).find(node=>node.props.className==='siv-comparison siv-wipe');
   const divider=nodes(wipe()).find(node=>node.type==='input');
   assert.equal(divider.props['aria-label'],'Position of comparison divider');
   divider.props.onChange({target:{value:'75'}});
   assert.equal(nodes(wipe()).find(node=>node.type==='img'&&node.props.src==='blob:old').props.style.clipPath,'inset(0 25% 0 0)');
-  nodes(render('new')).find(node=>node.children[0]==='Side by side').props.onClick();
+  modes()[0].props.onChange();
   assert.equal(wipe(),undefined);
   state.length=0;
   nodes(render('other',async()=>assert.fail('pin escaped the conversation loader'))).find(node=>node.children[0]==='Compare').props.onClick();

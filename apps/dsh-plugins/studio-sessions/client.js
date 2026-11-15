@@ -2,7 +2,7 @@
 window.__ModuleLoader__.load({id:'studio-sessions',factory(require){
   const {createElement:h,useState,useEffect,useRef,useSyncExternalStore}=require('react');
   const {createPortal}=require('react-dom');
-  const {Button,Modal,MenuItemButton,IconClockOutlineRegular}=require('@deepseek-ai/dsh-client-ui-primitives');
+  const {Button,Modal,MenuItemButton,IconClockOutlineRegular,IconCheckOutlineRegular,IconTrashOutlineRegular}=require('@deepseek-ai/dsh-client-ui-primitives');
     // Maintained client fragment, inserted by build-client.mjs; no direct entry point.
   const workspaceCatalog={"icons":{"image":"M3 3h18v18H3z M3 16l5-5 4 4 3-3 6 6 M16 7h.01","film":"M3 3h18v18H3z M7 3v18 M17 3v18 M3 8h4 M3 16h4 M17 8h4 M17 16h4","palette":"M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 1-3.7 1 1 0 0 1 1-1.7h2a4 4 0 0 0 4-4 8.7 8.7 0 0 0-9-8.6z M7 9h.01 M10 6h.01 M15 6h.01 M18 9h.01","star":"m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2-5.5-2.9-5.5 2.9 1-6.2L2 9.6l6.2-.9z","book":"M3 4h7l2 2 2-2h7v16h-7l-2 1-2-1H3z M12 6v15","code":"m8 7-5 5 5 5 M16 7l5 5-5 5 M14 4l-4 16","grid":"M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z","sparkles":"m12 3 2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z M20 2v4 M18 4h4"},"colors":["#64748b","#3b82f6","#14b8a6","#22c55e","#eab308","#f97316","#ef4444","#a855f7","#ec4899"],"uncategorized":"@uncategorized"};
   const WORKSPACE_PATH='/api/local-studio/workspace-visuals',WORKSPACE_INTENT='studio-sessions.workspace-intent.v1';
@@ -51,8 +51,8 @@ window.__ModuleLoader__.load({id:'studio-sessions',factory(require){
 
   const PATH='/api/local-studio/sessions',KEY='studio-sessions.intent.v1';
   const isDesktop=()=>window.location?.protocol==='dsh-app:'&&window.location.host==='app';
-  const en={title:'Session Library',search:'Title or session ID',scope:'Show',all:'All sessions',uncategorized:'Uncategorized',archived:'Archived',before:'Updated on or before',blank:'Empty only',refresh:'Refresh',select:'Select visible',clear:'Clear selection',review:'Review deletion',confirm:'Queue deletion',cancel:'Cancel reservation',retry:'Retry same reservation',selected:'selected',pending:'Deletion queued · next DSH start',deleted:'Deleted',blocked:'Not deleted · needs review',cancelled:'Cancelled',preview:'Confirm selected sessions',preserved:'Shared attachments, external inputs/outputs and models are preserved.',notice:'Selected history is deleted before DSH next starts, without archiving or restarting DSH. Changed or referenced history is protected.',busy:'Busy',dependent:'Referenced by another session',internal:'Internal subagent history',unavailable:'Not ready for deletion',queued:'Queued',empty:'No matching sessions',loading:'Loading…',reservation:'Deletion reservations',date:'Last updated'};
-  const ja={title:'Session Library',search:'タイトル・ID',scope:'表示対象',all:'すべてのセッション',uncategorized:'未分類',archived:'アーカイブ済み',before:'更新日（この日まで）',blank:'空の会話のみ',refresh:'再読込',select:'表示中を選択',clear:'選択解除',review:'削除対象を確認',confirm:'削除を予約',cancel:'削除予約を取消',retry:'同じ予約を再試行',selected:'件を選択',pending:'削除予約済み · 次回DSH起動時',deleted:'削除済み',blocked:'未削除 · 要確認',cancelled:'取消済み',preview:'削除する会話を確認',preserved:'共有添付・外部の入力と成果物・モデルは保持します。',notice:'選んだ会話は次回DSH起動前に削除します。アーカイブや自動再起動はしません。更新された会話や、他の会話が参照する履歴は削除しません。',busy:'処理中',dependent:'他のセッションが参照中',internal:'サブエージェント内部履歴',unavailable:'削除準備ができていません',queued:'削除予約済み',empty:'該当する会話はありません',loading:'読込中…',reservation:'削除予約',date:'最終更新'};
+  const en={title:'Session Library',search:'Title or session ID',scope:'Show',all:'All sessions',uncategorized:'Uncategorized',archived:'Archived',before:'Updated on or before',blank:'Empty only',refresh:'Refresh',select:'Select visible',clear:'Clear selection',review:'Review deletion',confirm:'Queue deletion',cancel:'Cancel',retry:'Retry same reservation',selected:'selected',pending:'Deletion queued · next DSH start',deleted:'Deleted',blocked:'Not deleted · needs review',cancelled:'Cancelled',preview:'Confirm selected sessions',preserved:'Shared attachments, external inputs/outputs and models are preserved.',notice:'Selected history is deleted before DSH next starts, without archiving or restarting DSH. Changed or referenced history is protected.',busy:'Busy',dependent:'Referenced by another session',internal:'Internal subagent history',unavailable:'Not ready for deletion',queued:'Queued',empty:'No matching sessions',loading:'Loading…',reservation:'Deletion reservations',date:'Last updated'};
+  const ja={title:'Session Library',search:'タイトル・ID',scope:'表示対象',all:'すべてのセッション',uncategorized:'未分類',archived:'アーカイブ済み',before:'更新日（この日まで）',blank:'空の会話のみ',refresh:'再読込',select:'表示中を選択',clear:'選択解除',review:'削除対象を確認',confirm:'削除を予約',cancel:'取消',retry:'同じ予約を再試行',selected:'件を選択',pending:'削除予約済み · 次回DSH起動時',deleted:'削除済み',blocked:'未削除 · 要確認',cancelled:'取消済み',preview:'削除する会話を確認',preserved:'共有添付・外部の入力と成果物・モデルは保持します。',notice:'選んだ会話は次回DSH起動前に削除します。アーカイブや自動再起動はしません。更新された会話や、他の会話が参照する履歴は削除しません。',busy:'処理中',dependent:'他のセッションが参照中',internal:'サブエージェント内部履歴',unavailable:'削除準備ができていません',queued:'削除予約済み',empty:'該当する会話はありません',loading:'読込中…',reservation:'削除予約',date:'最終更新'};
   Object.assign(en,workspaceEn);Object.assign(ja,workspaceJa);
   Object.assign(en,{desktopNotice:'Quit Desktop from the Windows tray, then reopen it normally. You can cancel a reservation before it starts.',desktopPending:'Deletion queued · next Desktop start',desktopLegacyNotice:'This profile needs the offline deletion adapter. You can cancel the reservation until it is applied.',desktopLegacyPending:'Deletion queued · awaiting offline processing'});
   Object.assign(ja,{desktopNotice:'WindowsのトレイからDesktopを終了し、普段どおり起動すると削除予約を処理します。起動までは取り消せます。',desktopPending:'削除予約済み · 次回のDesktop起動時',desktopLegacyNotice:'このプロファイルではオフラインの予約処理が必要です。処理前なら取り消せます。',desktopLegacyPending:'削除予約済み · オフライン処理待ち'});
@@ -119,7 +119,7 @@ window.__ModuleLoader__.load({id:'studio-sessions',factory(require){
       description:t(cancelling?'cancelExplanation':value?.startup?'scheduleExplanation':'desktopLegacyNotice'),
       footer:h('div',{className:'sl-dialog-actions'},
         h(Button,{type:'button',variant:'outline','data-modal-autofocus':true,disabled:busy,onClick:close},t(cancelling?'goBack':'keepSession')),
-        h(Button,{type:'button',variant:cancelling?'primary':'outline',className:cancelling?undefined:'sl-danger',disabled:busy||started.current||!preview&&!cancelling,onClick:()=>void confirm()},t(busy?'working':cancelling?'cancel':'confirm')))},
+        h(Button,{type:'button',variant:'outline',className:'sl-danger',disabled:busy||started.current||!preview&&!cancelling,onClick:()=>void confirm()},t(busy?'working':cancelling?'cancel':'confirm')))},
       h('strong',{className:'sl-dialog-session'},target.displayTitle||target.sessionId),
       cancelling&&target.count>1?h('p',{className:'sl-muted'},`${t('cancelBatch')} (${target.count})`):null,
       !cancelling?h('p',{className:'sl-muted'},t(preview?'preserved':'loading')):null,
@@ -135,6 +135,7 @@ window.__ModuleLoader__.load({id:'studio-sessions',factory(require){
     .sl-sidebar-reservation{justify-content:space-between;padding-inline-start:26px}.sl-sidebar-reservation>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .sl-dialog-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}.sl-dialog-session{overflow-wrap:anywhere}
     .sl-dialog-sessions{max-height:12rem;overflow:auto;padding-inline-start:20px;overflow-wrap:anywhere}
+    .sl-filter-option{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%}.sl-filter-option svg{flex:none;color:var(--dsw-alias-label-primary)}
     .sl-filter-heading{padding:5px 8px;color:var(--dsw-alias-label-tertiary);font-size:11px;border-top:1px solid var(--dsw-alias-border-l1);margin-top:4px}
   `;
   function workspaceOptions(doc,nativeViewOptions){
@@ -158,12 +159,12 @@ window.__ModuleLoader__.load({id:'studio-sessions',factory(require){
     const hide=queued.map(({sessionId})=>`[data-slot="sidebar.workspaces"] [data-row-key="session:${sessionId}"]`).join(',');
     const changeVisibility=next=>{setVisible(next);try{window.localStorage.setItem('studio-sessions.sidebar-queued',next?'shown':'hidden');}catch{}};
     const filter=seats.menu?createPortal(h('div',null,h('div',{className:'sl-filter-heading'},t('queuedOnly')),
-      ...[true,false].map(show=>h(MenuItemButton,{key:String(show),current:show===visible,onSelect:()=>{changeVisibility(show);seats.trigger?.click();}},t(show?'showQueued':'hideQueued')))),seats.menu):null;
+      ...[true,false].map(show=>h(MenuItemButton,{key:String(show),current:show===visible,onSelect:()=>{changeVisibility(show);seats.trigger?.click();}},h('span',{className:'sl-filter-option'},t(show?'showQueued':'hideQueued'),show===visible?h(IconCheckOutlineRegular,{size:14,'aria-hidden':true}):null)))),seats.menu):null;
     const category=seats.header&&queued.length&&visible?createPortal(h('div',{className:'sl-sidebar-queued'},
       h('details',null,h('summary',null,h(IconClockOutlineRegular,{size:15,'aria-hidden':true}),h('span',null,t('queuedOnly')),h('span',null,queued.length)),...queued.map(({sessionId})=>{
         const entry=list.byId[sessionId],displayTitle=entry.title??entry.projectionValues?.title??entry.displayTitle??sessionId;
         const pending=value.requests.find(r=>r.state==='pending'&&r.sessionIds.includes(sessionId));
-        return h('div',{key:sessionId,className:'sl-sidebar-reservation'},h('span',{title:displayTitle},displayTitle),pending?h(Button,{type:'button',variant:'ghost',size:'sm',onClick:()=>owner.open({sessionId,displayTitle,requestId:pending.id,count:pending.sessionIds.length})},t('cancel')):null);
+        return h('div',{key:sessionId,className:'sl-sidebar-reservation'},h('span',{title:displayTitle},displayTitle),pending?h(Button,{type:'button',variant:'ghost',size:'sm',className:'sl-danger',onClick:()=>owner.open({sessionId,displayTitle,requestId:pending.id,count:pending.sessionIds.length})},t('cancel')):null);
       }))),seats.header):null;
     return h('span',{style:{display:'contents'}},h('style',null,(hide?hide+'{display:none!important}':'')+sidebarCss+css),filter,category,target?h(ReservationDialog,{key:target.sessionId,owner,target,value,t}):null);
   }
@@ -195,7 +196,7 @@ window.__ModuleLoader__.load({id:'studio-sessions',factory(require){
         h('ul',{className:'sl-dialog-sessions'},...preview.titles.map(row=>h('li',{key:row.id},row.title))),
         h('p',{className:'sl-muted'},t('preserved')),error?h('p',{className:'sl-danger',role:'alert'},error):null):null,
       h('div',{className:'sl-list'},...rows.map(row=>h('label',{key:row.sessionId,className:'sl-row'},h('input',{type:'checkbox','aria-label':`Select ${row.sessionId}`,checked:selected.includes(row.sessionId),disabled:busy||uncertain||Boolean(reason(row)),onChange:e=>{setSelected(ids=>e.target.checked?[...ids,row.sessionId]:ids.filter(id=>id!==row.sessionId));setPreview(null);}}),h('span',{className:'sl-row-body'},h('strong',null,row.title),h('small',null,row.sessionId),h('small',null,`${t('date')} · ${new Date(row.updatedAt).toLocaleString()}`)),reason(row)?h('span',{className:'sl-badge'},t(reason(row))):null))),!rows.length?h('p',{className:'sl-muted'},t('empty')):null,
-      library?.requests?.length?h('section',{className:'sl-receipt-list','aria-label':'Deletion reservations'},h('h3',null,t('reservation')),...library.requests.slice().reverse().map(r=>h('details',{key:r.id,className:'sl-receipt',open:r.state==='pending'},h('summary',null,`${status(r.state)} · ${r.count} · ${new Date(r.requestedAt).toLocaleString()}`),h('ul',{className:'sl-muted'},...r.results.map(s=>h('li',{key:s.sessionId},s.sessionId,s.error?h('span',null,' · '+s.error):null))),r.state==='pending'?h(Button,{type:'button',variant:'outline',size:'sm',disabled:busy||uncertain,onClick:()=>void act({action:'cancel',requestId:r.id})},t('cancel')):null))):null),
+      library?.requests?.length?h('section',{className:'sl-receipt-list','aria-label':'Deletion reservations'},h('h3',null,t('reservation')),...library.requests.slice().reverse().map(r=>h('details',{key:r.id,className:'sl-receipt',open:r.state==='pending'},h('summary',null,`${status(r.state)} · ${r.count} · ${new Date(r.requestedAt).toLocaleString()}`),h('ul',{className:'sl-muted'},...r.results.map(s=>h('li',{key:s.sessionId},s.sessionId,s.error?h('span',null,' · '+s.error):null))),r.state==='pending'?h(Button,{type:'button',variant:'outline',size:'sm',className:'sl-danger',disabled:busy||uncertain,onClick:()=>void act({action:'cancel',requestId:r.id})},t('cancel')):null))):null),
       typeof renderSlot==='function'?renderSlot('studio.sessions.sections',{activeSection:section}):null);
   }
   function apply(ctx){
@@ -208,7 +209,7 @@ window.__ModuleLoader__.load({id:'studio-sessions',factory(require){
       const [,close]=useMenuOpenState();
       const {value}=useSyncExternalStore(owner.subscribe,owner.snapshot,owner.snapshot);
       const pending=value?.requests?.find(r=>r.state==='pending'&&r.sessionIds.includes(sessionId));
-      return h(MenuItemButton,{danger:!pending,onSelect:()=>{close(false);owner.open({sessionId,displayTitle,requestId:pending?.id,count:pending?.sessionIds.length});}},t(pending?'cancel':'confirm'));
+      return h(MenuItemButton,{danger:true,icon:h(pending?IconClockOutlineRegular:IconTrashOutlineRegular,{size:15,'aria-hidden':true}),onSelect:()=>{close(false);owner.open({sessionId,displayTitle,requestId:pending?.id,count:pending?.sessionIds.length});}},t(pending?'cancel':'confirm'));
     }));
     const nativeViewOptions=()=>ctx.locale.bind('workspace')('viewOptions.label');
     ctx.slots.inject('sidebar.footer.action',()=>ctx.slots.register({name:'sidebar.footer.action',id:'studio-session-reservation-panel',locale:'studio.sessions',inject:()=>({sessions:ctx.sessions,owner,nativeViewOptions})},SidebarReservations));

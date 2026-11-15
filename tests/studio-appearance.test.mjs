@@ -103,12 +103,12 @@ test('settings-only mode persists and the replacement opens the native settings 
 
 test('appearance renders accent, wallpaper and Desktop window controls with localized browser limitations',()=>{
   const api=appearance(),state={accentEnabled:false,accent:'#4176e6',opacity:18,wallpaperFit:'cover',wallpaperPosition:'center',wallpaperScope:'conversation',hasWallpaper:false,wallpaperUrl:null,error:''};
-  for(const [locale,titles,title]of [['en',['Accent','Surface palette','Wallpaper','Window opacity','New session heading'],'Accent & wallpaper'],['ja',['アクセント','背景のグレー','背景画像','ウィンドウの不透明度','新規セッションの見出し'],'アクセントと背景']]){
+  for(const [locale,titles,title]of [['en',['Accent','Wallpaper','Window opacity','New session heading'],'Accent & wallpaper'],['ja',['アクセント','背景画像','ウィンドウの不透明度','新規セッションの見出し'],'アクセントと背景']]){
     const t=key=>api[locale][key]??key,tree=nodes(api.Appearance({controller:{snapshot:()=>state},t}));
     assert.equal(tree[0].props['aria-label'],title);assert.equal(tree.find(node=>node.type==='h3').children[0],title);
     assert.deepEqual(tree.filter(node=>node.props.className==='studio-appearance-card').map(node=>node.props['aria-label']),titles);
     assert.deepEqual(tree.filter(node=>node.type==='input'&&node.props.type==='text').map(node=>node.props.value),['Into the Unknown','Preview']);
-    assert.equal(tree.filter(node=>node.type==='select').length,4);
+    assert.equal(tree.filter(node=>node.type==='select').length,3);
     const scope=tree.find(node=>node.type==='select'&&node.props['aria-label']===api[locale].scope);
     assert.ok(scope);assert.deepEqual(scope.children.map(option=>[option.props.value,option.children[0]]),[['conversation',api[locale].conversation],['window',api[locale].window]]);
     assert.equal(tree.filter(node=>node.type==='p'&&node.children.includes(api[locale].imageLimits)).length,1);
@@ -120,12 +120,17 @@ test('appearance renders accent, wallpaper and Desktop window controls with loca
   assert.deepEqual(Object.keys(api.en).sort(),Object.keys(api.ja).sort());
 });
 
-test('wallpaper framing keeps the selected ratio and clamps the center at image edges',()=>{
-  const {cropArea}=appearance();
-  const area=cropArea(1000,500,{ratio:'square',zoom:200,x:100,y:0},1.5);
-  assert.deepEqual({...area},{x:75,y:0,w:25,h:50});
-  const original=cropArea(500,1000,{ratio:'original',zoom:100,x:95,y:5},1.5);
-  assert.deepEqual({...original},{x:0,y:0,w:100,h:100});
+test('wallpaper selection passes the original file to storage and drops the retired palette preference',()=>{
+  const api=appearance(), file=new Blob(['original image'],{type:'image/png'}), seen=[];
+  const state=api.normalize({surface:'studio',wallpaperFit:'contain'});
+  assert.equal(Object.hasOwn(state,'surface'),false);
+  assert.equal(state.wallpaperFit,'contain');
+  const tree=nodes(api.Appearance({controller:{snapshot:()=>state,setWallpaper:selected=>seen.push(selected)},t:key=>api.en[key]}));
+  const input=tree.find(node=>node.type==='input'&&node.props.type==='file');
+  const target={value:'wallpaper.png',files:[file]};
+  input.props.onChange({target});
+  assert.equal(target.value,'');
+  assert.equal(seen[0],file);
 });
 
 test('browser never sends native window requests and Desktop saves only confirmed changes',async()=>{

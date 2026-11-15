@@ -7,8 +7,8 @@ session metadata and operation receipts.
 
 | Plugin | Owns | Boundary |
 | --- | --- | --- |
-| `studio-appearance` | Accent, wallpaper, optional Settings-only sidebar footer, and Windows Desktop window opacity. | DSH owns the settings dialog, account operations and font selection. Session Library owns workspace icons and colors. |
-| `studio-image-viewer` | Attachment viewing, zoom/pan and its `studio.image-viewer` locale. | It uses the existing authorized attachment loader and does not replace native conversation dictionaries or load arbitrary paths. |
+| `studio-appearance` | Accent, wallpaper, new-session heading and badge, sidebar appearance, and Windows Desktop window opacity. | DSH owns the settings dialog, account operations and font selection. Session Library owns workspace icons and colors. |
+| `studio-image-viewer` | Attachment viewing, zoom/pan, image comparison, and its `studio.image-viewer` locale. | It uses the existing authorized attachment loader and does not replace native conversation dictionaries or load arbitrary paths. |
 | `studio-sessions` | Session Library, workspace appearance and deletion reservations on Web and Desktop. | Actual deletion runs in the shared offline adapter before managed startup, preserving shared attachments and external assets. Each edition owns its session home, appearance and queue. |
 | `studio-host` | Confirmed normal/force host restart and its worker handoff. | The managed launcher owns startup; optional integration policies protect external work. It does not restart other products. |
 

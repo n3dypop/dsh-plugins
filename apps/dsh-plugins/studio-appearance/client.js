@@ -8,12 +8,7 @@ window.__ModuleLoader__.load({
     const KEY='studio-appearance.preferences.v1', WINDOW_KEY='studio-appearance.window-opacity.v1', DB='studio-appearance', STORE='assets', WALLPAPER='wallpaper';
     const MAX_BYTES=20*1024*1024, MAX_PIXELS=40000000;
     const SETTINGS_LAUNCHER='settings.launcher';
-    const defaults=Object.freeze({accentEnabled:false,accent:'#4176e6',surface:'dsh',opacity:18,wallpaperFit:'cover',wallpaperPosition:'center',wallpaperScope:'conversation',settingsOnly:false,compactNavigation:false,heroTitle:'Into the Unknown',heroBadge:'Preview'});
-    const studioSurfaces={
-      '--dsw-alias-bg-base':{light:'#f7f8fa',dark:'#181a1e'},
-      '--dsw-alias-bg-layer-1':{light:'#fbfcfe',dark:'#202226'},
-      '--dsw-alias-bg-layer-2':{light:'#f0f2f5',dark:'#282b30'},
-    };
+    const defaults=Object.freeze({accentEnabled:false,accent:'#4176e6',opacity:18,wallpaperFit:'cover',wallpaperPosition:'center',wallpaperScope:'conversation',settingsOnly:false,compactNavigation:false,heroTitle:'Into the Unknown',heroBadge:'Preview'});
     const presets=Object.freeze([{name:'ブルー',color:'#4176e6'},{name:'バイオレット',color:'#8057d8'},{name:'ジェイド',color:'#218071'},{name:'コーラル',color:'#c65d41'},{name:'ゴールド',color:'#a77b22'},{name:'スレート',color:'#64748b'}]);
     const copy={
       title:['アクセントと背景','Accent & wallpaper'],preview:['プレビュー','Preview'],accentTitle:['アクセント','Accent'],
@@ -26,7 +21,6 @@ window.__ModuleLoader__.load({
       windowReapply:['直前の結果は不明です。値を選び、適用して確認してください。','The last result is unknown. Select a value and apply it to confirm.'],
       settingsOnly:['左下に設定だけを表示','Show only Settings in the sidebar footer'],settings:['設定','Settings'],
       navigation:['追加メニュー','More tools'],compactNavigation:['左ペインの追加メニューを折りたたむ','Collapse extra tools in the sidebar'],
-      surface:['背景のグレー','Surface palette'],nativeSurface:['DSH標準','DSH Default'],studioSurface:['Media Studioのグレー','Media Studio Gray'],
       hero:['新規セッションの見出し','New session heading'],heroTitle:['見出し','Heading'],heroBadge:['バッジ','Badge'],resetHero:['英語の既定値に戻す','Restore English defaults'],
       blue:['ブルー','Blue'],violet:['バイオレット','Violet'],jade:['ジェイド','Jade'],coral:['コーラル','Coral'],gold:['ゴールド','Gold'],slate:['スレート','Slate'],
       imageStorage:['このブラウザーまたはアプリでは画像を保存できません。','This browser or app cannot store images.'],imageReadWrite:['背景画像を読み書きできません。','The wallpaper could not be read or written.'],imageSave:['背景画像を保存できません。','The wallpaper could not be saved.'],
@@ -40,7 +34,6 @@ window.__ModuleLoader__.load({
     function normalize(value){
       const v=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
       return {accentEnabled:v.accentEnabled===true,accent:validHex(v.accent)?v.accent.toLowerCase():defaults.accent,
-        surface:v.surface==='studio'?'studio':'dsh',
         opacity:Number.isInteger(v.opacity)&&v.opacity>=0&&v.opacity<=50?v.opacity:defaults.opacity,
         wallpaperFit:['cover','contain','tile'].includes(v.wallpaperFit)?v.wallpaperFit:defaults.wallpaperFit,
         wallpaperPosition:['center','top','bottom'].includes(v.wallpaperPosition)?v.wallpaperPosition:defaults.wallpaperPosition,
@@ -99,22 +92,21 @@ window.__ModuleLoader__.load({
         tx.oncomplete=()=>resolve(result);tx.onabort=tx.onerror=()=>reject(new Error('背景画像を保存できません。'));
       });}finally{db.close();}
     }
-    async function validateImage(file,decode,{dimensions=false}={}){
+    async function validateImage(file,decode){
       if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||!Number.isSafeInteger(file.size)||file.size<1||file.size>MAX_BYTES)throw new Error('PNG・JPEG・WebP（20 MiB以下）を選んでください。');
       const b=new Uint8Array(await file.slice(0,12).arrayBuffer());
       const png=b.length>=8&&[137,80,78,71,13,10,26,10].every((v,i)=>b[i]===v),jpeg=b.length>=3&&b[0]===255&&b[1]===216&&b[2]===255;
       const webp=b.length>=12&&String.fromCharCode(...b.slice(0,4))==='RIFF'&&String.fromCharCode(...b.slice(8,12))==='WEBP';
       if(!((file.type==='image/png'&&png)||(file.type==='image/jpeg'&&jpeg)||(file.type==='image/webp'&&webp)))throw new Error('画像形式を確認できません。');
       if(typeof decode!=='function')throw new Error('このブラウザーまたはアプリでは画像の寸法を確認できません。');
-      let bitmap;try{bitmap=await decode(file);if(!Number.isSafeInteger(bitmap.width)||!Number.isSafeInteger(bitmap.height)||bitmap.width<1||bitmap.height<1||bitmap.width>8192||bitmap.height>8192||bitmap.width*bitmap.height>MAX_PIXELS)throw new Error('背景画像の寸法が大きすぎます。');return dimensions?{width:bitmap.width,height:bitmap.height}:file;}finally{bitmap?.close?.();}
+      let bitmap;try{bitmap=await decode(file);if(!Number.isSafeInteger(bitmap.width)||!Number.isSafeInteger(bitmap.height)||bitmap.width<1||bitmap.height<1||bitmap.width>8192||bitmap.height>8192||bitmap.width*bitmap.height>MAX_PIXELS)throw new Error('背景画像の寸法が大きすぎます。');return file;}finally{bitmap?.close?.();}
     }
     function createController({theme,storage,indexedDB,doc,urlApi,decode}){
       let prefs=readPreferences(storage),disposeAccent=null,objectUrl=null,alive=true,version=0,hasWallpaper=false,error='',assetChain=Promise.resolve();
       const listeners=new Set(), notify=()=>{for(const listener of listeners)listener();};
       function applyAccent(){
         disposeAccent?.();disposeAccent=null;
-        const tokens={...(prefs.surface==='studio'?studioSurfaces:{}),...(prefs.accentEnabled?accentOverrides(prefs.accent):{})};
-        if(Object.keys(tokens).length)disposeAccent=theme.overrideTokens('studio-appearance',tokens);
+        if(prefs.accentEnabled)disposeAccent=theme.overrideTokens('studio-appearance',accentOverrides(prefs.accent));
       }
       function paintPreferences(){
         doc.body.style.setProperty('--studio-wallpaper-opacity',`${prefs.opacity}%`);
@@ -209,28 +201,6 @@ window.__ModuleLoader__.load({
       return {snapshot,subscribe(fn){listeners.add(fn);return()=>listeners.delete(fn);},setOpacity:apply,setModal,retry:initialize,dispose(){alive=false;listeners.clear();}};
     }
 
-    function cropBounds(width,height,{x=0,y=0,w=100,h=100}={}){
-      const left=Math.min(width-1,Math.floor(width*x/100)),top=Math.min(height-1,Math.floor(height*y/100));
-      return [left,top,Math.max(1,Math.min(width-left,Math.round(width*w/100))),Math.max(1,Math.min(height-top,Math.round(height*h/100)))];
-    }
-    const originalCrop={ratio:'original',zoom:100,x:50,y:50};
-    function cropArea(width,height,{ratio,zoom,x,y},windowRatio){
-      const aspect=ratio==='window'?windowRatio:ratio==='square'?1:width/height;
-      const widthFraction=Math.min(1,aspect*height/width)*10000/zoom;
-      const heightFraction=Math.min(1,width/(aspect*height))*10000/zoom;
-      return {x:Math.max(0,Math.min(100-widthFraction,x-widthFraction/2)),y:Math.max(0,Math.min(100-heightFraction,y-heightFraction/2)),w:widthFraction,h:heightFraction};
-    }
-    async function cropWallpaper(file,area,decode,doc){
-      await validateImage(file,decode);
-      if(area.x===0&&area.y===0&&area.w===100&&area.h===100)return file;
-      const bitmap=await decode(file);
-      try{
-        const [x,y,w,h]=cropBounds(bitmap.width,bitmap.height,area),canvas=doc.createElement('canvas');
-        const scale=Math.min(1,4096/Math.max(w,h));canvas.width=Math.max(1,Math.round(w*scale));canvas.height=Math.max(1,Math.round(h*scale));
-        canvas.getContext('2d').drawImage(bitmap,x,y,w,h,0,0,canvas.width,canvas.height);
-        return await new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(Error('背景画像を保存できません。')),'image/webp',0.94));
-      }finally{bitmap.close?.();}
-    }
     function SettingsLauncher({openSettings,settingsOpen,settingsShortcut,wide,t}){
       return React.createElement(Button,{
         type:'button',variant:'ghost',size:'sm',className:'studio-settings-launcher',onClick:()=>openSettings(),
@@ -248,25 +218,38 @@ window.__ModuleLoader__.load({
     }
     function HeroTitle({hero,children,controller,nativeCopy}){
       const {heroTitle,heroBadge}=useAppearance(controller);
-      const frame=React.useRef(null),[seat,setSeat]=React.useState(null);
-      React.useEffect(()=>{
+      const frame=React.useRef(null);
+      React.useLayoutEffect(()=>{
         const root=frame.current;
-        if(!hero||!root){setSeat(null);return;}
-        let marked=null;
+        if(!hero||!root)return;
+        const heading=heroTitle.trim()||defaults.heroTitle, badge=heroBadge.trim();
+        let pair;
+        const write=(node,value)=>{if(node.nodeValue!==value)node.nodeValue=value;};
         const update=()=>{
-          const {title,badge}=nativeCopy();
-          const next=[...root.querySelectorAll('[data-composer-seat] span > span + span')]
-            .find(node=>node.textContent===badge&&node.previousElementSibling?.textContent===title)?.parentElement??null;
-          if(next===marked)return;
-          marked?.removeAttribute('data-studio-hero-seat');marked=next;
-          marked?.setAttribute('data-studio-hero-seat','');setSeat(marked);
+          if(!pair||!pair.every(node=>root.contains(node))){
+            const native=nativeCopy();
+            const badgeElement=[...root.querySelectorAll('[data-composer-seat] span > span + span')].find(node=>
+              node.firstChild?.nodeType===3&&node.firstChild.nodeValue===native.badge&&
+              node.previousElementSibling?.firstChild?.nodeType===3&&node.previousElementSibling.firstChild.nodeValue===native.title);
+            if(!badgeElement)return;
+            pair=[badgeElement.previousElementSibling.firstChild,badgeElement.firstChild];
+          }
+          // Keep React's text nodes and the native badge styling.
+          write(pair[0],heading);write(pair[1],badge);
+          pair[1].parentElement.toggleAttribute('data-studio-hero-badge-hidden',!badge);
         };
-        const observer=new MutationObserver(update);observer.observe(root,{subtree:true,childList:true,characterData:true});update();
-        return()=>{observer.disconnect();marked?.removeAttribute('data-studio-hero-seat');};
-      },[hero,nativeCopy]);
-      return React.createElement('div',{ref:frame,style:{display:'contents'}},children,hero&&seat?createPortal(React.createElement(React.Fragment,null,
-        React.createElement('span',{'data-studio-hero-copy':''},heroTitle.trim()||defaults.heroTitle),
-        heroBadge.trim()?React.createElement('span',{'data-studio-hero-copy':'badge'},heroBadge.trim()):null),seat):null);
+        const observer=new MutationObserver(update);
+        observer.observe(root,{subtree:true,childList:true,characterData:true});
+        update();
+        return()=>{
+          observer.disconnect();
+          const native=nativeCopy();
+          if(pair?.[0].nodeValue===heading)write(pair[0],native.title);
+          if(pair?.[1].nodeValue===badge)write(pair[1],native.badge);
+          pair?.[1].parentElement?.removeAttribute('data-studio-hero-badge-hidden');
+        };
+      },[hero,heroTitle,heroBadge,nativeCopy]);
+      return React.createElement('div',{ref:frame,style:{display:'contents'}},children);
     }
     function CompactNavigation({wide,controller,navigationLabel,t}){
       const {compactNavigation}=useAppearance(controller);
@@ -274,8 +257,10 @@ window.__ModuleLoader__.load({
       React.useEffect(()=>{
         if(!compactNavigation){setNav(null);return;}
         const update=()=>{
-          const sidebar=document.querySelector('[data-slot="sidebar"]');
-          setNav(sidebar?.querySelector('[data-sidebar-scrollport] > nav')??[...(sidebar?.querySelectorAll('nav[aria-label]')??[])].find(el=>el.getAttribute('aria-label')===navigationLabel())??null);
+          const nav=document.querySelector('[data-sidebar-scrollport] > nav')??
+            [...document.querySelectorAll('nav[aria-label]')].find(element=>
+              element.getAttribute('aria-label')===navigationLabel()&&element.parentElement?.querySelector('[data-slot="sidebar.workspaces"]'));
+          setNav(nav??null);
         };
         const observer=new MutationObserver(update);observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['aria-label']});update();
         return()=>observer.disconnect();
@@ -294,7 +279,7 @@ window.__ModuleLoader__.load({
         return()=>nav.removeAttribute('hidden');
       },[nav,compactNavigation,expanded]);
       return compactNavigation&&mount?createPortal(React.createElement(Button,{type:'button',size:'sm',variant:'ghost',
-        className:'studio-compact-navigation','aria-label':t('navigation'),'aria-expanded':expanded,onClick:()=>setExpanded(!expanded),
+        className:'studio-compact-navigation','aria-label':t('navigation'),'aria-expanded':expanded,onClick:()=>setExpanded(value=>!value),
         icon:React.createElement(IconChevronDownOutlineRegular,{size:14})},wide?t('navigation'):null),mount):null;
     }
     function Appearance({controller,t,windowOpacity,settingsLauncherAvailable}){
@@ -302,27 +287,9 @@ window.__ModuleLoader__.load({
       const state=useAppearance(controller);
       const [windowState,setWindowState]=React.useState(()=>windowOpacity?.snapshot?.()??{desktop:false,opacity:100,confirmed:false,available:false,pending:false,error:''});
       const [windowDraft,setWindowDraft]=React.useState(()=>windowOpacity?.snapshot?.().opacity??100);
-      const [source,setSource]=React.useState(null),[framing,setFraming]=React.useState(originalCrop),[cropping,setCropping]=React.useState(false),[cropError,setCropError]=React.useState('');
-      const fileInput=React.useRef(null),fileRequest=React.useRef(0);
-      React.useEffect(()=>source?()=>URL.revokeObjectURL(source.url):undefined,[source]);
-      React.useEffect(()=>()=>{fileRequest.current++;},[]);
+      const fileInput=React.useRef(null);
       const japanese=t('title')==='アクセントと背景';
       const pick=(ja,en)=>japanese?ja:en;
-      const crop=source?cropArea(source.width,source.height,framing,window.innerWidth/window.innerHeight):null;
-      async function choose(file){
-        const request=++fileRequest.current;setCropError('');
-        try{const dimensions=await validateImage(file,window.createImageBitmap?.bind(window),{dimensions:true});if(request!==fileRequest.current)return;setFraming(originalCrop);setSource({file,url:URL.createObjectURL(file),...dimensions});}
-        catch(error){if(request===fileRequest.current)setCropError(error.message);}
-      }
-      async function saveCrop(){
-        fileRequest.current++;setCropping(true);setCropError('');
-        try{if(await controller.setWallpaper(await cropWallpaper(source.file,crop,window.createImageBitmap.bind(window),document)))setSource(null);}
-        catch(error){setCropError(error.message);}finally{setCropping(false);}
-      }
-      function cropPoint(event){
-        const rect=event.currentTarget.getBoundingClientRect();
-        return {x:Math.max(0,Math.min(100,Math.round(100*(event.clientX-rect.left)/rect.width))),y:Math.max(0,Math.min(100,Math.round(100*(event.clientY-rect.top)/rect.height)))};
-      }
       React.useEffect(()=>{if(!windowOpacity)return;const sync=()=>setWindowState(windowOpacity.snapshot());const stop=windowOpacity.subscribe(sync);sync();return stop;},[windowOpacity]);
       React.useEffect(()=>{setWindowDraft(windowState.opacity);},[windowState.opacity]);
       const card=(title,...children)=>h('section',{className:'studio-appearance-card','aria-label':title},
@@ -341,22 +308,9 @@ window.__ModuleLoader__.load({
           h('div',{className:'studio-appearance-swatches',role:'group','aria-label':'カラープリセット'},...presets.map(preset=>h(Button,{key:preset.color,type:'button',size:'sm',variant:'outline','aria-pressed':state.accentEnabled&&state.accent===preset.color,onClick:()=>controller.setPreferences({accentEnabled:true,accent:preset.color}),className:'studio-appearance-swatch'},h('span',{'aria-hidden':true,style:{background:preset.color}}),preset.name))),
           h('label',{className:'studio-appearance-field'},h('span',null,'色を選ぶ'),h('input',{type:'color',value:state.accent,onChange:e=>controller.setPreferences({accent:e.target.value,accentEnabled:true}),'aria-label':'アクセント'})),
           h('p',null,'読みやすさを自動調整')),
-        card('背景のグレー',
-          select('背景のグレー',state.surface??'dsh',e=>controller.setPreferences({surface:e.target.value}),[['dsh','DSH標準'],['studio','Media Studioのグレー']])),
         card('背景画像',
-          h('input',{ref:fileInput,type:'file',accept:'image/png,image/jpeg,image/webp',style:{display:'none'},onChange:e=>{const file=e.target.files?.[0];e.target.value='';if(file)void choose(file);},'aria-label':'背景画像を選ぶ',tabIndex:-1}),
-          h('div',{className:'studio-appearance-actions'},h(Button,{type:'button',size:'sm',variant:'outline',disabled:cropping,onClick:()=>fileInput.current?.click()},state.hasWallpaper?'変更':'画像を選ぶ'),h(Button,{type:'button',size:'sm',variant:'ghost',disabled:!state.hasWallpaper||cropping,onClick:()=>void controller.clearWallpaper()},'削除'),h('span',{className:'studio-appearance-muted'},state.hasWallpaper?'設定済み':'なし')),
-          source?h('section',{className:'studio-wallpaper-crop','aria-label':pick('切り抜き','Crop')},
-            select(pick('切り抜きの比率','Crop ratio'),framing.ratio,e=>setFraming({...framing,ratio:e.target.value}),[['original',pick('元の比率','Original')],['window',pick('ウィンドウに合わせる','Match window')],['square',pick('正方形','Square')]]),
-            h('p',null,pick('残したい場所をクリックします。必要に応じて拡大してください。','Click the area to keep. Adjust the zoom as needed.')),
-            h('button',{type:'button',className:'studio-wallpaper-crop-source',disabled:cropping,'aria-label':pick('切り抜きの中心。矢印キーで移動','Crop center. Move with arrow keys'),
-            onClick:e=>{if(e.detail>0){const point=cropPoint(e);setFraming(value=>({...value,...point}));}},
-            onKeyDown:e=>{const delta={ArrowLeft:[-5,0],ArrowRight:[5,0],ArrowUp:[0,-5],ArrowDown:[0,5]}[e.key];if(!delta)return;e.preventDefault();setFraming(value=>({...value,x:Math.max(0,Math.min(100,value.x+delta[0])),y:Math.max(0,Math.min(100,value.y+delta[1]))}));}},
-            h('img',{src:source.url,alt:pick('切り抜き元','Crop source'),draggable:false,style:{display:'block',maxWidth:'100%',maxHeight:'28vh',width:'auto',height:'auto'}}),
-            h('div',{'aria-hidden':true,style:{position:'absolute',left:`${crop.x}%`,top:`${crop.y}%`,width:`${crop.w}%`,height:`${crop.h}%`,outline:'2px solid white',boxShadow:'0 0 0 100vmax #0008',pointerEvents:'none'}})),
-            h('label',{className:'studio-appearance-field'},h('span',null,pick('拡大','Zoom')),h('input',{type:'range',min:100,max:300,value:framing.zoom,disabled:cropping,onChange:e=>setFraming({...framing,zoom:Number(e.target.value)})}),h('output',null,`${framing.zoom}%`)),
-            h('div',{className:'studio-appearance-actions'},h(Button,{type:'button',size:'sm',variant:'primary',disabled:cropping,onClick:()=>void saveCrop()},pick('この範囲を使う','Use crop')),h(Button,{type:'button',size:'sm',variant:'outline',disabled:cropping,onClick:()=>{fileRequest.current++;setSource(null);}},pick('取消','Cancel')))):null,
-          cropError?h('p',{role:'alert'},cropError):null,
+          h('input',{ref:fileInput,type:'file',accept:'image/png,image/jpeg,image/webp',style:{display:'none'},onChange:e=>{const file=e.target.files?.[0];e.target.value='';if(file)void controller.setWallpaper(file);},'aria-label':'背景画像を選ぶ',tabIndex:-1}),
+          h('div',{className:'studio-appearance-actions'},h(Button,{type:'button',size:'sm',variant:'outline',onClick:()=>fileInput.current?.click()},state.hasWallpaper?'変更':'画像を選ぶ'),h(Button,{type:'button',size:'sm',variant:'ghost',disabled:!state.hasWallpaper,onClick:()=>void controller.clearWallpaper()},'削除'),h('span',{className:'studio-appearance-muted'},state.hasWallpaper?'設定済み':'なし')),
           h('p',null,'PNG / JPEG / WebP · 20 MiB・一辺8192px・40MP以下 · このブラウザーまたはアプリに保存'),
           select('背景の表示範囲',state.wallpaperScope,e=>controller.setPreferences({wallpaperScope:e.target.value}),[['conversation','会話画面'],['window','画面全体']]),
           h('label',{className:'studio-appearance-field'},h('span',null,'濃さ'),h('output',null,`${state.opacity}%`)),h('input',{type:'range',min:0,max:50,step:1,value:state.opacity,onChange:e=>controller.setPreferences({opacity:Number(e.target.value)}),'aria-label':'濃さ'}),
@@ -412,6 +366,6 @@ window.__ModuleLoader__.load({
       });
       ctx.slots.inject('settings.general.item',()=>ctx.slots.register({name:'settings.general.item',id:'studio-appearance',order:12,locale:'studio.appearance',inject:()=>({controller,windowOpacity,settingsLauncherAvailable:ctx.slots.spec(SETTINGS_LAUNCHER)?.kind==='single'})},Appearance));
     }
-    return {inject:['slots','theme','locale'],apply,Appearance,SettingsLauncher,normalize,accentOverrides,contrastColor,validateImage,cropArea,createController,createWindowOpacityController,imageStore,en,ja,localizedText};
+    return {inject:['slots','theme','locale'],apply,Appearance,SettingsLauncher,normalize,accentOverrides,contrastColor,validateImage,createController,createWindowOpacityController,imageStore,en,ja,localizedText};
   },
 });
