@@ -1,7 +1,8 @@
 # Compatibility and maintenance
 
-The supported targets are DSH Web **0.2.1-rc.5**, **0.2.2-rc.1**, and
-**0.2.2-rc.3**, and Windows Desktop **0.2.2-rc.1** and **0.2.2-rc.3**.
+Supported DSH Web versions are **0.2.1-rc.5**, **0.2.2-rc.1**,
+**0.2.2-rc.3** and **0.2.2-rc.5**. Supported Windows Desktop versions are
+**0.2.2-rc.1**, **0.2.2-rc.3** and **0.2.2-rc.5**.
 Check the deployment's validation record for the operations exercised with its
 build and profile.
 
@@ -12,7 +13,7 @@ build and profile.
 | Native window opacity | Unavailable: a web page cannot change the browser window's native opacity | Available when explicitly enabled and the owned Desktop window can be identified; affects text and the whole window |
 | Image viewer | Supported | Supported |
 | Japanese language | Built into DSH 0.2.2 | Built into DSH 0.2.2 |
-| Session Library and permanent deletion | Enable the Windows Web startup plugin. Reservations apply when the Web Host next starts. | On Windows Desktop 0.2.2-rc.3, enable `platform: desktop` and the startup plugin. Quit the tray app before reopening it normally. |
+| Session Library and permanent deletion | Enable the Windows Web startup plugin. Reservations apply when the Web Host next starts. | On supported Windows Desktop versions, enable `platform: desktop` and the startup plugin. Quit the tray app before reopening it normally. |
 | Workspace icons and colors | Stored in the Web runtime | Available with Session Library enabled. Stored in the Desktop DSH home. |
 | Host restart | Supported by the managed Web adapter | Not supported; keep `studio-host` disabled |
 
@@ -62,3 +63,13 @@ Keep automated tests synthetic and temporary. Live acceptance must use an
 isolated DSH home with no copied production data. Ordinary success in a fixture
 does not demonstrate GPU execution, data migration or a user's acceptance of a
 generated artifact.
+
+After a DSH update, check plugin compatibility before adding startup dependencies.
+If DSH excludes the Session Library startup plugin, storage and HTTP entries that
+require `studioSessionStartup` cannot activate. Update the supported plugin set
+and review the deletion backend before enabling the new DSH version.
+
+For optional startup integration tests, set `MEDIA_STUDIO_DESKTOP_TEST_EXE` to
+the installed Windows Desktop executable and `MEDIA_STUDIO_WEB_TEST_RUNTIME`
+to the installed Web runtime directory before running `npm test`. These tests
+create empty temporary profiles; they never open the user's conversations.

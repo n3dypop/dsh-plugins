@@ -21,14 +21,14 @@ test('the standalone package gate refuses another product before inspecting its 
   await assert.rejects(checkPackage({root:fixture,syntax:false}),/Package metadata contract is invalid/);
 });
 test('root metadata uses the documented dependency-free checks and publication boundary',()=>{
-  assert.equal(metadata.private,true);assert.equal(metadata.license,'MIT');assert.equal(metadata.type,'module');assert.equal(metadata.engines?.dsh,'0.2.1-rc.5 || 0.2.2-rc.1 || 0.2.2-rc.3');assert.equal(metadata.scripts.check,'node scripts/check-package.mjs');assert.equal(metadata.scripts.test,'node --test tests/*.test.mjs');assert.ok(ids);
+  assert.equal(metadata.private,true);assert.equal(metadata.license,'MIT');assert.equal(metadata.type,'module');assert.equal(metadata.engines?.dsh,'0.2.1-rc.5 || 0.2.2-rc.1 || 0.2.2-rc.3 || 0.2.2-rc.5');assert.equal(metadata.scripts.check,'node scripts/check-package.mjs');assert.equal(metadata.scripts.test,'node --test tests/*.test.mjs');assert.ok(ids);
 });
 test('plugin manifests expose their local host and web client entries consistently',async()=>{
   const actual=[];for(const entry of await readdir(join(root,'apps/dsh-plugins'),{withFileTypes:true})){if(!entry.isDirectory()||entry.name==='shared')continue;try{await lstat(join(root,'apps/dsh-plugins',entry.name,'package.json'));actual.push(entry.name);}catch(error){if(error.code!=='ENOENT')throw error;}}
   assert.deepEqual(actual.sort(),[...ids].sort());
   for(const id of ids){
     const prefix='apps/dsh-plugins/'+id+'/',manifest=await json(prefix+'package.json');
-    const expectedEngine='0.2.1-rc.5 || 0.2.2-rc.1 || 0.2.2-rc.3';
+    const expectedEngine='0.2.1-rc.5 || 0.2.2-rc.1 || 0.2.2-rc.3 || 0.2.2-rc.5';
     assert.equal(manifest.private,true,id);assert.equal(manifest.type,'module',id);assert.equal(manifest.engines?.dsh,expectedEngine,id);
     const host=typeof manifest.exports==='string'?manifest.exports:manifest.exports?.['.']??manifest.main;
     assert.ok(['./index.mjs','index.mjs'].includes(host),id);assert.match(await text(prefix+'index.mjs'),/\bexport\s+(?:const\s+name|(?:async\s+)?function\s+apply)\b/,id);
